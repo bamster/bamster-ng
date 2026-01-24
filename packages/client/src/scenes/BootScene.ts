@@ -114,27 +114,19 @@ export class BootScene extends Phaser.Scene {
       const mainColor = colorMap[color] ?? 0xff00ff;
       const darkColor = darkMap[color] ?? 0xaa00aa;
 
-      // Main block fill with slight gradient effect
+      // Main block fill - solid color for seamless merging
       graphics.fillStyle(mainColor, 1);
-      graphics.fillRect(2, 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
+      graphics.fillRect(0, 0, BLOCK_SIZE, BLOCK_SIZE);
 
-      // Bright highlight (top and left edges) - neon glow effect
-      graphics.fillStyle(0xffffff, 0.6);
-      graphics.fillRect(2, 2, BLOCK_SIZE - 4, 3);
-      graphics.fillRect(2, 2, 3, BLOCK_SIZE - 4);
+      // Bright highlight (top and left edges) - subtle bevel effect
+      graphics.fillStyle(0xffffff, 0.3);
+      graphics.fillRect(0, 0, BLOCK_SIZE, 2);
+      graphics.fillRect(0, 0, 2, BLOCK_SIZE);
 
-      // Dark shadow (bottom and right edges)
-      graphics.fillStyle(darkColor, 1);
-      graphics.fillRect(2, BLOCK_SIZE - 5, BLOCK_SIZE - 4, 3);
-      graphics.fillRect(BLOCK_SIZE - 5, 2, 3, BLOCK_SIZE - 4);
-
-      // Outer border - dark
-      graphics.lineStyle(2, 0x111111, 1);
-      graphics.strokeRect(0, 0, BLOCK_SIZE, BLOCK_SIZE);
-
-      // Inner glow border
-      graphics.lineStyle(1, mainColor, 0.5);
-      graphics.strokeRect(3, 3, BLOCK_SIZE - 6, BLOCK_SIZE - 6);
+      // Dark shadow (bottom and right edges) - subtle bevel
+      graphics.fillStyle(darkColor, 0.8);
+      graphics.fillRect(0, BLOCK_SIZE - 2, BLOCK_SIZE, 2);
+      graphics.fillRect(BLOCK_SIZE - 2, 0, 2, BLOCK_SIZE);
 
       graphics.generateTexture(`block_${color}`, BLOCK_SIZE, BLOCK_SIZE);
       graphics.destroy();

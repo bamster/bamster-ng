@@ -19,12 +19,21 @@ import type { BlockColor, PowerUpType } from '@bamster/shared';
 import { Block } from '../entities/Block';
 import { PowerUp } from '../entities/PowerUp';
 
+export interface DifficultyConfig {
+  blockFallSpeed: number;
+  blockSpawnInterval: number;
+  blockSpawnIntervalMin: number;
+}
+
 export class BlockSpawner {
   private scene: Phaser.Scene;
   private blockGroup: Phaser.Physics.Arcade.Group;
   private powerUpGroup: Phaser.Physics.Arcade.Group;
   private spawnTimer?: Phaser.Time.TimerEvent;
   private gameStartTime: number;
+  private baseFallSpeed: number = BLOCK_FALL_SPEED;
+  private baseSpawnInterval: number = BLOCK_SPAWN_INTERVAL;
+  private minSpawnInterval: number = BLOCK_SPAWN_INTERVAL_MIN;
   private currentFallSpeed: number = BLOCK_FALL_SPEED;
   private currentSpawnInterval: number = BLOCK_SPAWN_INTERVAL;
 
@@ -38,12 +47,22 @@ export class BlockSpawner {
   constructor(
     scene: Phaser.Scene,
     blockGroup: Phaser.Physics.Arcade.Group,
-    powerUpGroup: Phaser.Physics.Arcade.Group
+    powerUpGroup: Phaser.Physics.Arcade.Group,
+    difficultyConfig?: DifficultyConfig
   ) {
     this.scene = scene;
     this.blockGroup = blockGroup;
     this.powerUpGroup = powerUpGroup;
     this.gameStartTime = scene.time.now;
+
+    // Apply difficulty config if provided
+    if (difficultyConfig) {
+      this.baseFallSpeed = difficultyConfig.blockFallSpeed;
+      this.baseSpawnInterval = difficultyConfig.blockSpawnInterval;
+      this.minSpawnInterval = difficultyConfig.blockSpawnIntervalMin;
+      this.currentFallSpeed = this.baseFallSpeed;
+      this.currentSpawnInterval = this.baseSpawnInterval;
+    }
   }
 
   // Get cluster HP
@@ -205,12 +224,12 @@ export class BlockSpawner {
 
     // Increase fall speed over time
     this.currentFallSpeed =
-      BLOCK_FALL_SPEED + BLOCK_FALL_SPEED_INCREMENT * elapsedMinutes;
+      this.baseFallSpeed + BLOCK_FALL_SPEED_INCREMENT * elapsedMinutes;
 
     // Decrease spawn interval over time (faster spawning)
     this.currentSpawnInterval = Math.max(
-      BLOCK_SPAWN_INTERVAL_MIN,
-      BLOCK_SPAWN_INTERVAL - elapsedMinutes * BLOCK_SPAWN_INTERVAL_DECREASE
+      this.minSpawnInterval,
+      this.baseSpawnInterval - elapsedMinutes * BLOCK_SPAWN_INTERVAL_DECREASE
     );
 
     // Update existing falling blocks

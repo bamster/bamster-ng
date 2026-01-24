@@ -11,16 +11,52 @@ const COLORS = {
   panelBg: 0x120824,
 };
 
+export type Difficulty = 'easy' | 'normal' | 'hard';
+
+export interface DifficultyConfig {
+  blockFallSpeed: number;
+  blockSpawnInterval: number;
+  startingHealth: number;
+  blockSpawnIntervalMin: number;
+  label: string;
+}
+
+export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
+  easy: {
+    blockFallSpeed: 80,
+    blockSpawnInterval: 1600,
+    blockSpawnIntervalMin: 600,
+    startingHealth: 5,
+    label: 'EASY',
+  },
+  normal: {
+    blockFallSpeed: 120,
+    blockSpawnInterval: 1200,
+    blockSpawnIntervalMin: 400,
+    startingHealth: 3,
+    label: 'NORMAL',
+  },
+  hard: {
+    blockFallSpeed: 160,
+    blockSpawnInterval: 800,
+    blockSpawnIntervalMin: 250,
+    startingHealth: 2,
+    label: 'HARD',
+  },
+};
+
 interface GameSettings {
   masterVolume: number;
   musicVolume: number;
   sfxVolume: number;
+  difficulty: Difficulty;
 }
 
 const DEFAULT_SETTINGS: GameSettings = {
   masterVolume: 0.8,
   musicVolume: 0.7,
   sfxVolume: 0.8,
+  difficulty: 'normal',
 };
 
 export class SettingsScene extends Phaser.Scene {
@@ -83,12 +119,21 @@ export class SettingsScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Volume sliders
-    this.createSlider(GAME_WIDTH / 2, 160, 'MASTER VOLUME', 'masterVolume');
-    this.createSlider(GAME_WIDTH / 2, 220, 'MUSIC VOLUME', 'musicVolume');
-    this.createSlider(GAME_WIDTH / 2, 280, 'SFX VOLUME', 'sfxVolume');
+    this.createSlider(GAME_WIDTH / 2, 150, 'MASTER VOLUME', 'masterVolume');
+    this.createSlider(GAME_WIDTH / 2, 200, 'MUSIC VOLUME', 'musicVolume');
+    this.createSlider(GAME_WIDTH / 2, 250, 'SFX VOLUME', 'sfxVolume');
+
+    // Difficulty section
+    this.add.text(GAME_WIDTH / 2, 300, '─── DIFFICULTY ───', {
+      fontSize: '16px',
+      fontFamily: 'monospace',
+      color: '#00ffff',
+    }).setOrigin(0.5);
+
+    this.createDifficultySelector(GAME_WIDTH / 2, 340);
 
     // Controls section
-    this.add.text(GAME_WIDTH / 2, 350, '─── CONTROLS ───', {
+    this.add.text(GAME_WIDTH / 2, 390, '─── CONTROLS ───', {
       fontSize: '16px',
       fontFamily: 'monospace',
       color: '#00ffff',
@@ -103,7 +148,7 @@ export class SettingsScene extends Phaser.Scene {
       { action: 'PAUSE', key: 'ESC / P' },
     ];
 
-    let controlY = 390;
+    let controlY = 430;
     controlsData.forEach((control) => {
       this.add.text(GAME_WIDTH / 2 - 120, controlY, control.action, {
         fontSize: '14px',
@@ -175,7 +220,7 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   private updateSliderValue(hitZone: Phaser.GameObjects.Rectangle, pointerX: number): void {
-    const settingKey = hitZone.getData('settingKey') as keyof GameSettings;
+    const settingKey = hitZone.getData('settingKey') as 'masterVolume' | 'musicVolume' | 'sfxVolume';
     const sliderX = hitZone.getData('sliderX') as number;
     const sliderWidth = hitZone.getData('sliderWidth') as number;
 
@@ -197,10 +242,10 @@ export class SettingsScene extends Phaser.Scene {
     const sliderHeight = 12;
     const handleWidth = 8;
 
-    const sliders: { key: keyof GameSettings; y: number }[] = [
-      { key: 'masterVolume', y: 160 },
-      { key: 'musicVolume', y: 220 },
-      { key: 'sfxVolume', y: 280 },
+    const sliders: { key: 'masterVolume' | 'musicVolume' | 'sfxVolume'; y: number }[] = [
+      { key: 'masterVolume', y: 150 },
+      { key: 'musicVolume', y: 200 },
+      { key: 'sfxVolume', y: 250 },
     ];
 
     sliders.forEach(({ key, y }) => {
@@ -243,6 +288,79 @@ export class SettingsScene extends Phaser.Scene {
       });
       percentText.setOrigin(0, 0.5);
       percentText.setData('isPercentage', true);
+    });
+  }
+
+  private difficultyButtons: Phaser.GameObjects.Container[] = [];
+
+  private createDifficultySelector(x: number, y: number): void {
+    const difficulties: Difficulty[] = ['easy', 'normal', 'hard'];
+    const buttonWidth = 90;
+    const spacing = 10;
+    const totalWidth = difficulties.length * buttonWidth + (difficulties.length - 1) * spacing;
+    let startX = x - totalWidth / 2 + buttonWidth / 2;
+
+    difficulties.forEach((difficulty) => {
+      const config = DIFFICULTY_CONFIGS[difficulty];
+      const container = this.add.container(startX, y);
+
+      const bg = this.add.rectangle(0, 0, buttonWidth, 35, COLORS.darkPurple);
+      bg.setStrokeStyle(2, COLORS.neonPink);
+
+      const label = this.add.text(0, 0, config.label, {
+        fontSize: '14px',
+        fontFamily: 'monospace',
+        color: '#ffffff',
+      });
+      label.setOrigin(0.5);
+
+      container.add([bg, label]);
+      container.setSize(buttonWidth, 35);
+      container.setInteractive({ useHandCursor: true });
+      container.setData('difficulty', difficulty);
+      container.setData('bg', bg);
+      container.setData('label', label);
+
+      container.on('pointerover', () => {
+        if (this.settings.difficulty !== difficulty) {
+          bg.setFillStyle(0x4a1a6a);
+        }
+      });
+
+      container.on('pointerout', () => {
+        if (this.settings.difficulty !== difficulty) {
+          bg.setFillStyle(COLORS.darkPurple);
+        }
+      });
+
+      container.on('pointerdown', () => {
+        this.settings.difficulty = difficulty;
+        this.updateDifficultyButtons();
+      });
+
+      this.difficultyButtons.push(container);
+      startX += buttonWidth + spacing;
+    });
+
+    // Set initial button states
+    this.updateDifficultyButtons();
+  }
+
+  private updateDifficultyButtons(): void {
+    this.difficultyButtons.forEach((container) => {
+      const difficulty = container.getData('difficulty') as Difficulty;
+      const bg = container.getData('bg') as Phaser.GameObjects.Rectangle;
+      const label = container.getData('label') as Phaser.GameObjects.Text;
+
+      if (this.settings.difficulty === difficulty) {
+        bg.setFillStyle(0x4a1a6a);
+        bg.setStrokeStyle(3, COLORS.neonCyan);
+        label.setColor('#00ffff');
+      } else {
+        bg.setFillStyle(COLORS.darkPurple);
+        bg.setStrokeStyle(2, COLORS.neonPink);
+        label.setColor('#ffffff');
+      }
     });
   }
 

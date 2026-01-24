@@ -24,6 +24,7 @@ import {
   type BlockNetState,
 } from '../systems/NetworkManager';
 import { getSound } from '../systems/SoundManager';
+import { getGameSettings, DIFFICULTY_CONFIGS } from './SettingsScene';
 
 // 80s color palette
 const COLORS = {
@@ -127,6 +128,9 @@ export class GameScene extends Phaser.Scene {
     this.healthTexts = [];
     this.heartContainers = [];
     this.powerUpIndicators = [];
+    // Set maxHearts based on difficulty
+    const settings = getGameSettings();
+    this.maxHearts = DIFFICULTY_CONFIGS[settings.difficulty].startingHealth;
     // Load high score from localStorage
     const savedHighScore = localStorage.getItem('bamster_highscore');
     this.highScore = savedHighScore ? parseInt(savedHighScore, 10) : 0;
@@ -201,11 +205,16 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Create block spawner (local modes only)
+    // Get difficulty settings
+    const settings = getGameSettings();
+    const difficultyConfig = DIFFICULTY_CONFIGS[settings.difficulty];
+
+    // Create block spawner (local modes only) with difficulty config
     this.blockSpawner = new BlockSpawner(
       this,
       this.blockGroup,
-      this.powerUpGroup
+      this.powerUpGroup,
+      difficultyConfig
     );
 
     // Create players based on mode (they'll stand on the ground)
@@ -1182,6 +1191,10 @@ export class GameScene extends Phaser.Scene {
   // ============================================
 
   private createPlayers(): void {
+    // Get difficulty settings for starting health
+    const settings = getGameSettings();
+    const difficultyConfig = DIFFICULTY_CONFIGS[settings.difficulty];
+
     // Player 1 - position within play area
     const player1 = new Bamster(
       this,
@@ -1190,6 +1203,7 @@ export class GameScene extends Phaser.Scene {
       'player1',
       this.laserGroup
     );
+    player1.health = difficultyConfig.startingHealth;
     this.players.push(player1);
 
     // Player 2 for local multiplayer
@@ -1201,6 +1215,7 @@ export class GameScene extends Phaser.Scene {
         'player2',
         this.laserGroup
       );
+      player2.health = difficultyConfig.startingHealth;
       player2.setTint(0xaaaaff); // Slightly different color
       this.players.push(player2);
     }

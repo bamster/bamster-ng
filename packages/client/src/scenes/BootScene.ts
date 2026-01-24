@@ -356,73 +356,114 @@ export class BootScene extends Phaser.Scene {
   }
 
   private generatePowerUpTextures(): void {
-    // Corn power-up
+    const size = 32; // Consistent size for all power-ups
+    const center = size / 2;
+
+    // Corn power-up (health) - neon yellow/green
     const cornGraphics = this.make.graphics({ x: 0, y: 0 });
-    cornGraphics.fillStyle(0xffd700, 1); // Golden yellow
-    cornGraphics.fillEllipse(12, 16, 16, 24);
-    cornGraphics.fillStyle(0x228b22, 1); // Green husk
-    cornGraphics.fillTriangle(4, 0, 12, 8, 20, 0);
+    // Outer glow
+    cornGraphics.fillStyle(0xffff00, 0.3);
+    cornGraphics.fillEllipse(center, center + 2, 22, 28);
+    // Main corn body
+    cornGraphics.fillStyle(0xffdd00, 1);
+    cornGraphics.fillEllipse(center, center + 2, 16, 22);
+    // Neon green husk/leaves
+    cornGraphics.fillStyle(0x00ff66, 1);
+    cornGraphics.fillTriangle(center - 8, 4, center, 12, center + 8, 4);
     // Corn kernels pattern
     cornGraphics.fillStyle(0xffaa00, 1);
-    for (let row = 0; row < 4; row++) {
+    for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
-        cornGraphics.fillCircle(6 + col * 6, 10 + row * 6, 2);
+        cornGraphics.fillCircle(center - 5 + col * 5, 14 + row * 6, 2);
       }
     }
-    cornGraphics.generateTexture('powerup_corn', 24, 32);
+    // Highlight
+    cornGraphics.fillStyle(0xffffff, 0.5);
+    cornGraphics.fillEllipse(center - 3, center, 4, 8);
+    cornGraphics.generateTexture('powerup_corn', size, size);
     cornGraphics.destroy();
 
-    // Sneakers power-up
+    // Sneakers power-up (jump boost) - neon cyan
     const sneakersGraphics = this.make.graphics({ x: 0, y: 0 });
-    sneakersGraphics.fillStyle(0x4169e1, 1); // Royal blue
-    sneakersGraphics.fillRoundedRect(0, 8, 24, 12, 4);
-    sneakersGraphics.fillStyle(0xffffff, 1); // White sole
-    sneakersGraphics.fillRect(0, 16, 24, 4);
-    sneakersGraphics.fillStyle(0xff4500, 1); // Orange accent
-    sneakersGraphics.fillRect(2, 10, 4, 6);
-    // Laces
-    sneakersGraphics.lineStyle(1, 0xffffff, 1);
-    sneakersGraphics.lineBetween(8, 8, 12, 12);
-    sneakersGraphics.lineBetween(14, 8, 18, 12);
-    sneakersGraphics.generateTexture('powerup_sneakers', 24, 24);
+    // Outer glow
+    sneakersGraphics.fillStyle(0x00ffff, 0.3);
+    sneakersGraphics.fillRoundedRect(2, 8, 28, 18, 6);
+    // Shoe body
+    sneakersGraphics.fillStyle(0x00ccff, 1);
+    sneakersGraphics.fillRoundedRect(4, 10, 24, 14, 4);
+    // Neon pink sole
+    sneakersGraphics.fillStyle(0xff00ff, 1);
+    sneakersGraphics.fillRect(4, 20, 24, 4);
+    // White stripe
+    sneakersGraphics.fillStyle(0xffffff, 1);
+    sneakersGraphics.fillRect(8, 12, 16, 3);
+    // Wing icon (speed)
+    sneakersGraphics.fillStyle(0xffff00, 1);
+    sneakersGraphics.fillTriangle(22, 8, 30, 12, 22, 16);
+    sneakersGraphics.generateTexture('powerup_sneakers', size, size);
     sneakersGraphics.destroy();
 
-    // Rapid fire power-up
+    // Rapid fire power-up - neon red/orange
     const rapidGraphics = this.make.graphics({ x: 0, y: 0 });
-    rapidGraphics.fillStyle(0xff4444, 1);
-    rapidGraphics.fillRect(4, 8, 16, 8);
+    // Outer glow
+    rapidGraphics.fillStyle(0xff4400, 0.3);
+    rapidGraphics.fillCircle(center, center, 14);
+    // Inner circle
+    rapidGraphics.fillStyle(0xff2200, 1);
+    rapidGraphics.fillCircle(center, center, 11);
+    // Lightning bolt icon
     rapidGraphics.fillStyle(0xffff00, 1);
-    // Multiple bullet lines
-    rapidGraphics.fillRect(20, 6, 8, 2);
-    rapidGraphics.fillRect(20, 10, 8, 2);
-    rapidGraphics.fillRect(20, 14, 8, 2);
-    rapidGraphics.generateTexture('powerup_rapid', 28, 24);
+    rapidGraphics.fillTriangle(center - 6, center - 8, center + 2, center - 2, center - 2, center - 2);
+    rapidGraphics.fillTriangle(center - 2, center - 2, center + 6, center + 8, center + 2, center + 2);
+    rapidGraphics.fillRect(center - 2, center - 2, 4, 4);
+    // Speed lines
+    rapidGraphics.lineStyle(2, 0xffff00, 0.8);
+    rapidGraphics.lineBetween(2, center - 4, 8, center - 4);
+    rapidGraphics.lineBetween(2, center + 4, 8, center + 4);
+    rapidGraphics.generateTexture('powerup_rapid', size, size);
     rapidGraphics.destroy();
 
-    // Spread shot power-up
+    // Spread shot power-up - neon green
     const spreadGraphics = this.make.graphics({ x: 0, y: 0 });
-    spreadGraphics.fillStyle(0x44ff44, 1);
-    spreadGraphics.fillRect(4, 10, 12, 6);
+    // Outer glow
+    spreadGraphics.fillStyle(0x00ff00, 0.3);
+    spreadGraphics.fillCircle(center, center, 14);
+    // Inner circle
+    spreadGraphics.fillStyle(0x00cc00, 1);
+    spreadGraphics.fillCircle(center, center, 11);
+    // 3-way spread icon
     spreadGraphics.fillStyle(0xffff00, 1);
-    // Fan of bullets
-    spreadGraphics.fillRect(16, 4, 8, 2);
-    spreadGraphics.fillRect(16, 12, 8, 2);
-    spreadGraphics.fillRect(16, 20, 8, 2);
-    spreadGraphics.generateTexture('powerup_spread', 28, 28);
+    // Center bullet
+    spreadGraphics.fillRect(center - 2, center - 2, 8, 4);
+    // Top bullet
+    spreadGraphics.fillRect(center - 2, center - 8, 8, 4);
+    // Bottom bullet
+    spreadGraphics.fillRect(center - 2, center + 4, 8, 4);
+    // Arrows
+    spreadGraphics.fillTriangle(center + 8, center - 6, center + 12, center - 6, center + 10, center - 10);
+    spreadGraphics.fillTriangle(center + 8, center, center + 14, center, center + 10, center);
+    spreadGraphics.fillTriangle(center + 8, center + 6, center + 12, center + 6, center + 10, center + 10);
+    spreadGraphics.generateTexture('powerup_spread', size, size);
     spreadGraphics.destroy();
 
-    // Piercing laser power-up
+    // Piercing laser power-up - neon purple/cyan
     const piercingGraphics = this.make.graphics({ x: 0, y: 0 });
-    piercingGraphics.fillStyle(0x9944ff, 1);
-    piercingGraphics.fillRect(4, 10, 12, 6);
+    // Outer glow
+    piercingGraphics.fillStyle(0x9900ff, 0.3);
+    piercingGraphics.fillCircle(center, center, 14);
+    // Inner circle
+    piercingGraphics.fillStyle(0x7700cc, 1);
+    piercingGraphics.fillCircle(center, center, 11);
+    // Piercing beam icon
     piercingGraphics.fillStyle(0x00ffff, 1);
-    // Long piercing beam
-    piercingGraphics.fillRect(16, 11, 16, 4);
-    // Targets it goes through
-    piercingGraphics.lineStyle(2, 0xff0000, 0.5);
-    piercingGraphics.strokeCircle(22, 13, 4);
-    piercingGraphics.strokeCircle(30, 13, 4);
-    piercingGraphics.generateTexture('powerup_piercing', 36, 28);
+    piercingGraphics.fillRect(6, center - 2, 20, 4);
+    // Arrow tip
+    piercingGraphics.fillTriangle(26, center - 5, 26, center + 5, 30, center);
+    // Pierced targets
+    piercingGraphics.lineStyle(2, 0xff00ff, 0.8);
+    piercingGraphics.strokeCircle(10, center, 4);
+    piercingGraphics.strokeCircle(18, center, 4);
+    piercingGraphics.generateTexture('powerup_piercing', size, size);
     piercingGraphics.destroy();
   }
 

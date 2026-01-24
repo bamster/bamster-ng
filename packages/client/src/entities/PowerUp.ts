@@ -23,18 +23,22 @@ export class PowerUp extends Phaser.Physics.Arcade.Sprite {
     // Fall slower than blocks
     this.setVelocityY(BLOCK_FALL_SPEED * 0.7);
 
-    // Add floating animation
+    // Ensure power-ups render above blocks
+    this.setDepth(10);
+
+    // Scale up for better visibility
+    this.setScale(1.25);
+
+    // Add pulsing glow animation (no static tint that washes out colors)
     scene.tweens.add({
       targets: this,
-      y: y + 5,
-      duration: 500,
+      alpha: { from: 0.8, to: 1 },
+      scale: { from: 1.2, to: 1.35 },
+      duration: 400,
       ease: 'Sine.easeInOut',
       yoyo: true,
       repeat: -1,
     });
-
-    // Add glow effect
-    this.setTint(0xffffaa);
   }
 
   collect(): void {

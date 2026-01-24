@@ -8,6 +8,7 @@ import {
   BAMSTER_SPEED,
   BAMSTER_JUMP_VELOCITY,
   GRAVITY,
+  BAMSTER_STARTING_HEALTH,
 } from '@bamster/shared';
 import type { GameMode } from './MenuScene';
 import { Bamster } from '../entities/Bamster';
@@ -62,7 +63,7 @@ export class GameScene extends Phaser.Scene {
   private healthTexts: Phaser.GameObjects.Text[] = [];
   private heartContainers: Phaser.GameObjects.Container[] = [];
   private powerUpIndicators: Phaser.GameObjects.Container[] = [];
-  private maxHearts: number = 5;
+  private maxHearts: number = BAMSTER_STARTING_HEALTH;
   private highScore: number = 0;
 
   // Combo system
@@ -1309,10 +1310,55 @@ export class GameScene extends Phaser.Scene {
       this.checkGameOver();
     }
 
+    // Visual feedback for damage
+    this.showDamageEffect(player.x, player.y);
+
     // Destroy the block that hit the player
     this.createBlockExplosion(block.x, block.y, block.color);
     getSound().play('hit');
     block.destroyBlock();
+  }
+
+  private showDamageEffect(x: number, y: number): void {
+    // Camera shake
+    this.cameras.main.shake(150, 0.01);
+
+    // Red flash overlay
+    const flashOverlay = this.add.rectangle(
+      PLAY_AREA_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      PLAY_AREA_WIDTH,
+      GAME_HEIGHT,
+      0xff0000,
+      0.3
+    );
+    flashOverlay.setDepth(90);
+    this.tweens.add({
+      targets: flashOverlay,
+      alpha: 0,
+      duration: 200,
+      onComplete: () => flashOverlay.destroy(),
+    });
+
+    // Floating damage indicator
+    const damageText = this.add.text(x, y - 20, '-1 ♥', {
+      fontSize: '24px',
+      fontFamily: 'monospace',
+      color: '#ff0000',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    damageText.setOrigin(0.5);
+    damageText.setDepth(95);
+
+    this.tweens.add({
+      targets: damageText,
+      y: y - 60,
+      alpha: 0,
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => damageText.destroy(),
+    });
   }
 
   private handleBlockGroundCollision(block: Block): void {

@@ -303,7 +303,49 @@ export class BlockSpawner {
       block.destroyBlock();
     });
 
+    // After a short delay, check for unsupported blocks that should fall
+    this.scene.time.delayedCall(200, () => {
+      this.dropUnsupportedBlocks();
+    });
+
     return { count, score: totalScore };
+  }
+
+  private dropUnsupportedBlocks(): void {
+    const restingBlocks = this.blockGroup.children
+      .getArray()
+      .filter((b) => (b as Block).isResting && b.active) as Block[];
+
+    // Ground level (top of ground platform)
+    const groundY = GAME_HEIGHT - BLOCK_SIZE;
+
+    // Check each resting block for support
+    restingBlocks.forEach((block) => {
+      // If block is at ground level, it's supported
+      if (block.y >= groundY - BLOCK_SIZE / 2) {
+        return;
+      }
+
+      // Check if there's another block directly below
+      const hasSupport = restingBlocks.some((other) => {
+        if (other === block || !other.active) return false;
+        // Other block should be directly below (same X, Y is one block lower)
+        const sameColumn = Math.abs(other.x - block.x) < BLOCK_SIZE * 0.5;
+        const oneBlockBelow =
+          other.y > block.y &&
+          other.y - block.y < BLOCK_SIZE * 1.5 &&
+          other.y - block.y > BLOCK_SIZE * 0.5;
+        return sameColumn && oneBlockBelow;
+      });
+
+      if (!hasSupport) {
+        // Make block fall again
+        block.isResting = false;
+        const body = block.body as Phaser.Physics.Arcade.Body;
+        body.setImmovable(false);
+        body.setVelocityY(this.currentFallSpeed);
+      }
+    });
   }
 
   getBlocks(): Block[] {

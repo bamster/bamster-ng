@@ -1,5 +1,14 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, BLOCK_SIZE, PLAY_AREA_WIDTH, FRAME_WIDTH } from '@bamster/shared';
+import {
+  GAME_WIDTH,
+  GAME_HEIGHT,
+  BLOCK_SIZE,
+  PLAY_AREA_WIDTH,
+  FRAME_WIDTH,
+  BAMSTER_SPEED,
+  BAMSTER_JUMP_VELOCITY,
+  GRAVITY,
+} from '@bamster/shared';
 import type { GameMode } from './MenuScene';
 import { Bamster } from '../entities/Bamster';
 import { Block } from '../entities/Block';
@@ -77,6 +86,13 @@ export class GameScene extends Phaser.Scene {
   private networkLasers: Map<string, Phaser.GameObjects.Sprite> = new Map();
   private networkPowerUps: Map<string, Phaser.GameObjects.Sprite> = new Map();
 
+  // Input prediction state for local player
+  private predictedX: number = 0;
+  private predictedY: number = 0;
+  private predictedVx: number = 0;
+  private predictedVy: number = 0;
+  private predictionInitialized: boolean = false;
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -104,6 +120,13 @@ export class GameScene extends Phaser.Scene {
     this.networkBlocks = new Map();
     this.networkLasers = new Map();
     this.networkPowerUps = new Map();
+
+    // Reset prediction state
+    this.predictedX = 0;
+    this.predictedY = 0;
+    this.predictedVx = 0;
+    this.predictedVy = 0;
+    this.predictionInitialized = false;
 
     // Reset combo state
     this.comboCount = 0;
@@ -670,12 +693,23 @@ export class GameScene extends Phaser.Scene {
     state: PlayerNetState,
     isLocal: boolean
   ): void {
-    // Smooth interpolation for remote players, direct for local
-    if (isLocal) {
+    if (isLocal && this.predictionInitialized) {
+      // Use predicted position for local player for responsive feel
+      // Blend between prediction and server state to correct drift
+      const correctionFactor = 0.1; // How much to correct per frame
+      this.predictedX = Phaser.Math.Linear(this.predictedX, state.x, correctionFactor);
+      this.predictedY = Phaser.Math.Linear(this.predictedY, state.y, correctionFactor);
+      this.predictedVx = Phaser.Math.Linear(this.predictedVx, state.vx, correctionFactor);
+      this.predictedVy = Phaser.Math.Linear(this.predictedVy, state.vy, correctionFactor);
+
+      container.x = this.predictedX;
+      container.y = this.predictedY;
+    } else if (isLocal) {
+      // No prediction yet, use server state directly
       container.x = state.x;
       container.y = state.y;
     } else {
-      // Lerp towards server position
+      // Lerp towards server position for remote players
       container.x = Phaser.Math.Linear(container.x, state.x, 0.3);
       container.y = Phaser.Math.Linear(container.y, state.y, 0.3);
     }
@@ -818,6 +852,9 @@ export class GameScene extends Phaser.Scene {
   private handleOnlineInput(): void {
     const input = this.inputManager.getPlayer1Input();
 
+    // Apply input prediction locally for responsive feel
+    this.applyInputPrediction(input);
+
     // Send input to server
     this.networkManager?.sendInput({
       left: input.left,
@@ -825,6 +862,60 @@ export class GameScene extends Phaser.Scene {
       jump: input.jump,
       shoot: input.shoot,
     });
+  }
+
+  private applyInputPrediction(input: { left: boolean; right: boolean; jump: boolean; shoot: boolean }): void {
+    // Initialize prediction from server state if not done yet
+    if (!this.predictionInitialized && this.networkState && this.localPlayerId) {
+      const localPlayer = this.networkState.players.get(this.localPlayerId);
+      if (localPlayer) {
+        this.predictedX = localPlayer.x;
+        this.predictedY = localPlayer.y;
+        this.predictedVx = localPlayer.vx;
+        this.predictedVy = localPlayer.vy;
+        this.predictionInitialized = true;
+      }
+      return;
+    }
+
+    if (!this.predictionInitialized) return;
+
+    const deltaTime = this.game.loop.delta / 1000; // Convert to seconds
+
+    // Apply horizontal input to velocity
+    if (input.left) {
+      this.predictedVx = -BAMSTER_SPEED;
+    } else if (input.right) {
+      this.predictedVx = BAMSTER_SPEED;
+    } else {
+      this.predictedVx = 0;
+    }
+
+    // Apply gravity
+    this.predictedVy += GRAVITY * deltaTime;
+
+    // Apply jump if grounded (simple ground check)
+    const groundY = GAME_HEIGHT - BLOCK_SIZE - 26; // Approximate ground position
+    if (input.jump && this.predictedY >= groundY - 5) {
+      this.predictedVy = BAMSTER_JUMP_VELOCITY;
+    }
+
+    // Update predicted position
+    this.predictedX += this.predictedVx * deltaTime;
+    this.predictedY += this.predictedVy * deltaTime;
+
+    // Clamp to play area bounds
+    const halfWidth = 28; // Approximate player half-width
+    this.predictedX = Math.max(
+      FRAME_WIDTH + halfWidth,
+      Math.min(PLAY_AREA_WIDTH - FRAME_WIDTH - halfWidth, this.predictedX)
+    );
+
+    // Clamp to ground
+    if (this.predictedY > groundY) {
+      this.predictedY = groundY;
+      this.predictedVy = 0;
+    }
   }
 
   // ============================================
@@ -1060,8 +1151,32 @@ export class GameScene extends Phaser.Scene {
       this.resetCombo();
     });
 
+    // Screen shake on big combos
+    if (this.comboCount >= 5) {
+      this.triggerComboShake();
+    }
+
     // Update combo display
     this.updateComboDisplay();
+  }
+
+  private triggerComboShake(): void {
+    // Intensity increases with combo level
+    let intensity = 0.005;
+    let duration = 100;
+
+    if (this.comboCount >= 20) {
+      intensity = 0.02;
+      duration = 200;
+    } else if (this.comboCount >= 15) {
+      intensity = 0.015;
+      duration = 180;
+    } else if (this.comboCount >= 10) {
+      intensity = 0.01;
+      duration = 150;
+    }
+
+    this.cameras.main.shake(duration, intensity);
   }
 
   private resetCombo(): void {

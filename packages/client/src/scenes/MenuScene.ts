@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
+import { getSound } from '../systems/SoundManager';
 
 export type GameMode = 'single' | 'local' | 'online';
 
@@ -188,6 +189,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private startGame(mode: GameMode): void {
+    // Initialize audio (requires user interaction)
+    getSound().init();
     this.scene.start('GameScene', { mode });
   }
 }

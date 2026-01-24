@@ -13,6 +13,7 @@ import {
 } from '@bamster/shared';
 import type { WeaponType } from '@bamster/shared';
 import { Laser } from './Laser';
+import { getSound } from '../systems/SoundManager';
 
 export class Bamster extends Phaser.Physics.Arcade.Sprite {
   public playerId: string;
@@ -79,6 +80,7 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     const jumpVelocity = BAMSTER_JUMP_VELOCITY * this.jumpPower;
     body.setVelocityY(jumpVelocity);
     this.canJump = false;
+    getSound().play('jump');
     return true;
   }
 
@@ -92,6 +94,7 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.lastFireTime = now;
+    getSound().play('laser');
     const lasers: Laser[] = [];
 
     const offsetX = this.facingRight ? 24 : -24;
@@ -179,6 +182,7 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
 
   takeDamage(): boolean {
     this.health -= 1;
+    getSound().play('damage');
 
     if (this.health <= 0) {
       this.die();

@@ -45,6 +45,8 @@ export class GameScene extends Phaser.Scene {
 
   // Game state
   private isGameOver: boolean = false;
+  private isPaused: boolean = false;
+  private pauseOverlay?: Phaser.GameObjects.Container;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -53,6 +55,7 @@ export class GameScene extends Phaser.Scene {
   init(data: GameSceneData): void {
     this.mode = data.mode || 'single';
     this.isGameOver = false;
+    this.isPaused = false;
     this.players = [];
     this.scoreTexts = [];
     this.healthTexts = [];
@@ -104,6 +107,144 @@ export class GameScene extends Phaser.Scene {
 
     // Start spawning blocks
     this.blockSpawner.start();
+
+    // Setup pause key
+    this.input.keyboard?.on('keydown-ESC', () => this.togglePause());
+    this.input.keyboard?.on('keydown-P', () => this.togglePause());
+  }
+
+  private togglePause(): void {
+    if (this.isGameOver) return;
+
+    if (this.isPaused) {
+      this.resumeGame();
+    } else {
+      this.pauseGame();
+    }
+  }
+
+  private pauseGame(): void {
+    this.isPaused = true;
+    this.physics.pause();
+    this.blockSpawner.stop();
+
+    // Create pause overlay
+    this.pauseOverlay = this.add.container(0, 0);
+    this.pauseOverlay.setDepth(100);
+
+    // Dark overlay
+    const overlay = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      0x000000,
+      0.7
+    );
+    this.pauseOverlay.add(overlay);
+
+    // Scanlines effect
+    const graphics = this.add.graphics();
+    for (let i = 0; i < GAME_HEIGHT; i += 4) {
+      graphics.fillStyle(0x000000, 0.1);
+      graphics.fillRect(0, i, GAME_WIDTH, 2);
+    }
+    this.pauseOverlay.add(graphics);
+
+    // Pause title
+    const titleShadow = this.add.text(GAME_WIDTH / 2 + 3, 153, 'PAUSED', {
+      fontSize: '56px',
+      fontFamily: 'monospace',
+      color: '#220022',
+    });
+    titleShadow.setOrigin(0.5);
+    this.pauseOverlay.add(titleShadow);
+
+    const title = this.add.text(GAME_WIDTH / 2, 150, 'PAUSED', {
+      fontSize: '56px',
+      fontFamily: 'monospace',
+      color: '#ff00ff',
+      stroke: '#ff88ff',
+      strokeThickness: 3,
+    });
+    title.setOrigin(0.5);
+    this.pauseOverlay.add(title);
+
+    // Pulsing animation
+    this.tweens.add({
+      targets: title,
+      alpha: 0.7,
+      duration: 500,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // Resume button
+    this.createPauseButton(GAME_WIDTH / 2, 280, '► RESUME', () => this.resumeGame());
+
+    // Restart button
+    this.createPauseButton(GAME_WIDTH / 2, 340, '► RESTART', () => {
+      this.scene.restart({ mode: this.mode });
+    });
+
+    // Quit button
+    this.createPauseButton(GAME_WIDTH / 2, 400, '► QUIT TO MENU', () => {
+      this.scene.start('MenuScene');
+    });
+
+    // Hint text
+    const hint = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 50, 'PRESS ESC OR P TO RESUME', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#666688',
+    });
+    hint.setOrigin(0.5);
+    this.pauseOverlay.add(hint);
+  }
+
+  private createPauseButton(x: number, y: number, text: string, onClick: () => void): void {
+    if (!this.pauseOverlay) return;
+
+    const bg = this.add.rectangle(x, y, 240, 42, COLORS.panelBg);
+    bg.setStrokeStyle(2, COLORS.frameNeon);
+    this.pauseOverlay.add(bg);
+
+    const label = this.add.text(x, y, text, {
+      fontSize: '18px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+    });
+    label.setOrigin(0.5);
+    this.pauseOverlay.add(label);
+
+    bg.setInteractive({ useHandCursor: true });
+
+    bg.on('pointerover', () => {
+      bg.setFillStyle(0x4a1a6a);
+      bg.setStrokeStyle(3, COLORS.textNeon);
+      label.setColor('#00ffff');
+    });
+
+    bg.on('pointerout', () => {
+      bg.setFillStyle(COLORS.panelBg);
+      bg.setStrokeStyle(2, COLORS.frameNeon);
+      label.setColor('#ffffff');
+    });
+
+    bg.on('pointerdown', onClick);
+  }
+
+  private resumeGame(): void {
+    this.isPaused = false;
+    this.physics.resume();
+    this.blockSpawner.start();
+
+    // Remove pause overlay
+    if (this.pauseOverlay) {
+      this.pauseOverlay.destroy(true);
+      this.pauseOverlay = undefined;
+    }
   }
 
   private createRetroFrame(): void {
@@ -262,21 +403,31 @@ export class GameScene extends Phaser.Scene {
     // Only falling (non-resting) blocks can hurt
     if (block.isResting) return false;
 
-    // Only hurt if block is above the player (hitting from top)
-    // Block must be mostly above the player's head
-    const playerTop = player.y - 20;
-    const blockBottom = block.y + BLOCK_SIZE / 2;
+    // Block must be moving downward (actually falling)
+    const blockBody = block.body as Phaser.Physics.Arcade.Body;
+    if (blockBody.velocity.y <= 0) return false;
 
-    return blockBottom < playerTop + 15; // Block is above player
+    // Block must be above the player's center (hitting head area)
+    // and horizontally overlapping
+    const blockBottom = block.y + BLOCK_SIZE / 2;
+    const playerTop = player.y - 15;
+
+    // Block bottom must be above player's upper body
+    if (blockBottom > playerTop) return false;
+
+    // Check horizontal overlap - block must be mostly over the player
+    const dx = Math.abs(block.x - player.x);
+    if (dx > BLOCK_SIZE * 0.7) return false;
+
+    return true;
   }
 
   private handleFallingBlockHit(player: Bamster, block: Block): void {
     if (!player.isAlive || block.isResting) return;
 
-    // Double-check block is above player
-    const playerTop = player.y - 20;
-    const blockBottom = block.y + BLOCK_SIZE / 2;
-    if (blockBottom >= playerTop + 15) return; // Not from above
+    // Block must be moving downward
+    const blockBody = block.body as Phaser.Physics.Arcade.Body;
+    if (blockBody.velocity.y <= 0) return;
 
     const died = player.takeDamage();
     if (died) {
@@ -548,25 +699,37 @@ export class GameScene extends Phaser.Scene {
   }
 
   private checkCrushed(): void {
-    // Check if any player is crushed by blocks stacking too high
+    // Check if any player is crushed by blocks stacking on top of them
+    // This should only trigger when a player is truly sandwiched between ground and block
     this.players.forEach((player) => {
       if (!player.isAlive) return;
 
       const playerBody = player.body as Phaser.Physics.Arcade.Body;
-      if (!playerBody.blocked.down && !playerBody.touching.down) return;
 
-      // Check if there's a block directly above the player
-      const blocksAbove = this.blockGroup.children.getArray().filter((b) => {
+      // Player must be blocked both below AND above to be crushed
+      // This means they're truly sandwiched
+      if (!playerBody.blocked.down && !playerBody.touching.down) return;
+      if (!playerBody.blocked.up && !playerBody.touching.up) return;
+
+      // Double-check there's actually a resting block directly above
+      const blocksDirectlyAbove = this.blockGroup.children.getArray().filter((b) => {
         const block = b as Block;
         if (!block.isResting) return false;
 
+        // Block must be very close horizontally (directly above)
         const dx = Math.abs(block.x - player.x);
-        const dy = player.y - block.y;
+        if (dx > BLOCK_SIZE * 0.5) return false;
 
-        return dx < BLOCK_SIZE && dy > 0 && dy < BLOCK_SIZE * 1.5;
+        // Block must be just above the player's head
+        const blockBottom = block.y + BLOCK_SIZE / 2;
+        const playerTop = player.y - 20;
+        const gap = playerTop - blockBottom;
+
+        // Block bottom should be very close to or touching player top
+        return gap < 5 && gap > -BLOCK_SIZE;
       });
 
-      if (blocksAbove.length > 0) {
+      if (blocksDirectlyAbove.length > 0) {
         // Player is being crushed
         const died = player.takeDamage();
         if (died) {
@@ -577,7 +740,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(): void {
-    if (this.isGameOver) return;
+    if (this.isGameOver || this.isPaused) return;
 
     // Handle input for each player
     this.handlePlayerInput();

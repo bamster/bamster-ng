@@ -226,8 +226,13 @@ export class BlockSpawner {
       const dx = Math.abs(other.x - block.x);
       const dy = Math.abs(other.y - block.y);
 
-      // Check if adjacent (including diagonals for more merging)
-      return dx <= BLOCK_SIZE && dy <= BLOCK_SIZE && (dx > 0 || dy > 0);
+      // Check if adjacent (horizontally or vertically only, not diagonals)
+      // Horizontal neighbor: same row (dy small), adjacent column (dx ~ BLOCK_SIZE)
+      const isHorizontalNeighbor = dy < BLOCK_SIZE * 0.5 && dx > BLOCK_SIZE * 0.5 && dx < BLOCK_SIZE * 1.5;
+      // Vertical neighbor: same column (dx small), adjacent row (dy ~ BLOCK_SIZE)
+      const isVerticalNeighbor = dx < BLOCK_SIZE * 0.5 && dy > BLOCK_SIZE * 0.5 && dy < BLOCK_SIZE * 1.5;
+
+      return isHorizontalNeighbor || isVerticalNeighbor;
     });
 
     if (adjacentSameColor.length > 0) {

@@ -30,6 +30,10 @@ export class BlockSpawner {
   // Track HP per cluster (merged blocks share HP pool)
   private clusterHp: Map<string, number> = new Map();
 
+  // Early game power-up tracking
+  private spawnCount: number = 0;
+  private earlyPowerUpSpawned: boolean = false;
+
   constructor(
     scene: Phaser.Scene,
     blockGroup: Phaser.Physics.Arcade.Group,
@@ -127,6 +131,8 @@ export class BlockSpawner {
   }
 
   private spawn(): void {
+    this.spawnCount++;
+
     // Calculate random X position (grid-aligned within play area)
     const usableWidth = PLAY_AREA_WIDTH - FRAME_WIDTH * 2;
     const gridColumns = Math.floor(usableWidth / BLOCK_SIZE);
@@ -134,9 +140,32 @@ export class BlockSpawner {
     const x = FRAME_WIDTH + column * BLOCK_SIZE + BLOCK_SIZE / 2;
     const y = -BLOCK_SIZE;
 
-    // Chance to spawn power-up instead
-    if (Math.random() < POWERUP_SPAWN_CHANCE) {
+    // Determine if we should spawn a power-up
+    let shouldSpawnPowerUp = false;
+
+    // Guarantee first power-up between spawns 5-8 (gives player time to adjust)
+    if (!this.earlyPowerUpSpawned && this.spawnCount >= 5 && this.spawnCount <= 8) {
+      // Increasing chance: 25% at spawn 5, 50% at 6, 75% at 7, guaranteed at 8
+      const earlyChance = (this.spawnCount - 4) * 0.25;
+      if (Math.random() < earlyChance) {
+        shouldSpawnPowerUp = true;
+        this.earlyPowerUpSpawned = true;
+      }
+    }
+
+    // Regular power-up chance (higher in early game)
+    if (!shouldSpawnPowerUp) {
+      // Double power-up chance for first 20 spawns
+      const effectiveChance =
+        this.spawnCount <= 20 ? POWERUP_SPAWN_CHANCE * 2 : POWERUP_SPAWN_CHANCE;
+      shouldSpawnPowerUp = Math.random() < effectiveChance;
+    }
+
+    if (shouldSpawnPowerUp) {
       this.spawnPowerUp(x, y);
+      if (!this.earlyPowerUpSpawned) {
+        this.earlyPowerUpSpawned = true;
+      }
     } else {
       this.spawnBlock(x, y);
     }

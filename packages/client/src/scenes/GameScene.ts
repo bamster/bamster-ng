@@ -7,7 +7,7 @@ import { Laser } from '../entities/Laser';
 import { PowerUp } from '../entities/PowerUp';
 import { BlockSpawner } from '../systems/BlockSpawner';
 import { InputManager } from '../systems/InputManager';
-// Network imports (for future online multiplayer feature)
+// Network imports (for future online multiplayer - see BAM-tp5)
 // import { NetworkManager, type NetworkState } from '../systems/NetworkManager';
 
 // 80s color palette
@@ -51,7 +51,7 @@ export class GameScene extends Phaser.Scene {
   private isPaused: boolean = false;
   private pauseOverlay?: Phaser.GameObjects.Container;
 
-  // Online multiplayer (to be implemented - see BAM-tp5 epic)
+  // Online multiplayer (to be implemented - see BAM-tp5)
   // Network properties will be added when implementing online mode
 
   constructor() {

@@ -13,6 +13,7 @@ import {
   type PlayerNetState,
   type BlockNetState,
 } from '../systems/NetworkManager';
+import { getSound } from '../systems/SoundManager';
 
 // 80s color palette
 const COLORS = {
@@ -989,6 +990,7 @@ export class GameScene extends Phaser.Scene {
     if (clusterDestroyed) {
       // Destroy entire cluster
       const { score } = this.blockSpawner.destroyCluster(block.clusterId);
+      getSound().play('explosion');
 
       // Emit particle effect for block destruction
       this.createBlockExplosion(block.x, block.y, block.color);
@@ -1000,6 +1002,7 @@ export class GameScene extends Phaser.Scene {
       }
     } else {
       // Cluster took damage but isn't destroyed yet
+      getSound().play('hit');
       // Show small hit indicator
       this.showHitPopup(block.x, block.y);
     }

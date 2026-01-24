@@ -6,8 +6,9 @@ export const FRAME_WIDTH = 4;
 
 // Physics
 export const GRAVITY = 800;
-export const BAMSTER_SPEED = 200;
-export const BAMSTER_JUMP_VELOCITY = -400;
+export const BAMSTER_SPEED = 220;
+export const BAMSTER_JUMP_VELOCITY = -440;
+export const COYOTE_TIME = 100; // ms - grace period for jumping after leaving platform
 export const BAMSTER_STARTING_HEALTH = 3;
 export const BLOCK_FALL_SPEED = 120;
 export const BLOCK_FALL_SPEED_INCREMENT = 15; // Speed increase per minute

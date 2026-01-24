@@ -10,6 +10,7 @@ import {
   POWERUP_DURATION,
   PLAY_AREA_WIDTH,
   FRAME_WIDTH,
+  COYOTE_TIME,
 } from '@bamster/shared';
 import type { WeaponType } from '@bamster/shared';
 import { Laser } from './Laser';
@@ -27,6 +28,7 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   private lastFireTime: number = 0;
   private laserGroup: Phaser.Physics.Arcade.Group;
   private canJump: boolean = true;
+  private lastGroundedTime: number = 0; // For coyote time
 
   private sneakersTimer?: Phaser.Time.TimerEvent;
   private weaponTimer?: Phaser.Time.TimerEvent;
@@ -48,8 +50,8 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setCollideWorldBounds(false); // Allow falling off
-    body.setBounce(0);
-    body.setDragX(1000);
+    body.setBounce(0.05); // Tiny bounce for liveliness
+    body.setDragX(750); // Reduced for more sliding momentum
     body.setAllowGravity(true);
     body.setSize(32, 40);
     body.setOffset(8, 4);
@@ -72,7 +74,10 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   }
 
   jump(): boolean {
-    if (!this.canJump) {
+    const now = this.scene.time.now;
+    const withinCoyoteTime = now - this.lastGroundedTime < COYOTE_TIME;
+
+    if (!this.canJump && !withinCoyoteTime) {
       return false;
     }
 
@@ -80,6 +85,7 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     const jumpVelocity = BAMSTER_JUMP_VELOCITY * this.jumpPower;
     body.setVelocityY(jumpVelocity);
     this.canJump = false;
+    this.lastGroundedTime = 0; // Reset to prevent double-jump from coyote time
     getSound().play('jump');
     return true;
   }
@@ -255,6 +261,7 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
 
     if (onGround) {
       this.canJump = true;
+      this.lastGroundedTime = this.scene.time.now; // Track for coyote time
     }
 
     // Update sprite based on velocity (cape animation)

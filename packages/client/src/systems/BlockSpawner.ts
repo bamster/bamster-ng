@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {
   BLOCK_SIZE,
   BLOCK_COLORS,
+  BLOCK_HP,
   BLOCK_SPAWN_INTERVAL,
   BLOCK_SPAWN_INTERVAL_MIN,
   BLOCK_SPAWN_INTERVAL_DECREASE,
@@ -277,23 +278,23 @@ export class BlockSpawner {
         }
       }
 
-      // Calculate new cluster HP: sum all merging cluster HPs + 1 for each merge
+      // Calculate new cluster HP with diminishing returns
+      // Formula: baseHp + (blockCount - 1) × baseHp × 0.5
+      // This creates a trade-off: fused blocks have less total HP than separate blocks
       const mergingClusterIds = new Set<string>([block.clusterId]);
       adjacentSameColor.forEach(other => mergingClusterIds.add(other.clusterId));
 
-      let totalHp = 0;
       let blockCount = 0;
       mergingClusterIds.forEach(clusterId => {
-        totalHp += this.clusterHp.get(clusterId) ?? block.hp;
         blockCount += this.getClusterSize(clusterId);
         if (clusterId !== targetClusterId) {
           this.clusterHp.delete(clusterId); // Clean up old cluster HP
         }
       });
 
-      // Add +1 HP for each additional block beyond the first (merge bonus)
-      const mergeBonus = blockCount - 1;
-      const newClusterHp = totalHp + mergeBonus;
+      // Diminishing returns: 50% bonus per additional block (not full HP)
+      const baseHp = BLOCK_HP[block.color] ?? 3;
+      const newClusterHp = Math.ceil(baseHp + (blockCount - 1) * baseHp * 0.5);
       this.clusterHp.set(targetClusterId, newClusterHp);
 
       // Merge all into the target cluster

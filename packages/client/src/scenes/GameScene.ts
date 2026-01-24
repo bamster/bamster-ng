@@ -248,47 +248,53 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createRetroFrame(): void {
-    const graphics = this.add.graphics();
+    // Background graphics (low depth, behind everything)
+    const bgGraphics = this.add.graphics();
+    bgGraphics.setDepth(-10);
 
     // Dark background
-    graphics.fillStyle(COLORS.background, 1);
-    graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    bgGraphics.fillStyle(COLORS.background, 1);
+    bgGraphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
     // Play area background (slightly lighter)
-    graphics.fillStyle(0x0f0f2a, 1);
-    graphics.fillRect(FRAME_WIDTH, FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH * 2, GAME_HEIGHT - FRAME_WIDTH * 2);
+    bgGraphics.fillStyle(0x0f0f2a, 1);
+    bgGraphics.fillRect(FRAME_WIDTH, FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH * 2, GAME_HEIGHT - FRAME_WIDTH * 2);
 
     // Side panel background
-    graphics.fillStyle(COLORS.panelBg, 1);
-    graphics.fillRect(PLAY_AREA_WIDTH, 0, GAME_WIDTH - PLAY_AREA_WIDTH, GAME_HEIGHT);
+    bgGraphics.fillStyle(COLORS.panelBg, 1);
+    bgGraphics.fillRect(PLAY_AREA_WIDTH, 0, GAME_WIDTH - PLAY_AREA_WIDTH, GAME_HEIGHT);
+
+    // Frame graphics (high depth, on top of ground and other elements)
+    const frameGraphics = this.add.graphics();
+    frameGraphics.setDepth(100);
 
     // Outer frame - neon glow effect
-    graphics.lineStyle(FRAME_WIDTH, COLORS.frameNeon, 0.8);
-    graphics.strokeRect(2, 2, PLAY_AREA_WIDTH - 4, GAME_HEIGHT - 4);
+    frameGraphics.lineStyle(FRAME_WIDTH, COLORS.frameNeon, 0.8);
+    frameGraphics.strokeRect(2, 2, PLAY_AREA_WIDTH - 4, GAME_HEIGHT - 4);
 
     // Inner frame highlight
-    graphics.lineStyle(2, COLORS.frameLight, 1);
-    graphics.strokeRect(FRAME_WIDTH + 2, FRAME_WIDTH + 2, PLAY_AREA_WIDTH - FRAME_WIDTH * 2 - 4, GAME_HEIGHT - FRAME_WIDTH * 2 - 4);
+    frameGraphics.lineStyle(2, COLORS.frameLight, 1);
+    frameGraphics.strokeRect(FRAME_WIDTH + 2, FRAME_WIDTH + 2, PLAY_AREA_WIDTH - FRAME_WIDTH * 2 - 4, GAME_HEIGHT - FRAME_WIDTH * 2 - 4);
 
     // Panel divider with neon line
-    graphics.lineStyle(3, COLORS.frameNeon, 0.6);
-    graphics.lineBetween(PLAY_AREA_WIDTH, 0, PLAY_AREA_WIDTH, GAME_HEIGHT);
+    frameGraphics.lineStyle(3, COLORS.frameNeon, 0.6);
+    frameGraphics.lineBetween(PLAY_AREA_WIDTH, 0, PLAY_AREA_WIDTH, GAME_HEIGHT);
 
     // Decorative corner accents
     const cornerSize = 20;
-    graphics.lineStyle(2, COLORS.textNeon, 1);
+    frameGraphics.lineStyle(2, COLORS.textNeon, 1);
     // Top-left
-    graphics.lineBetween(FRAME_WIDTH, FRAME_WIDTH + cornerSize, FRAME_WIDTH, FRAME_WIDTH);
-    graphics.lineBetween(FRAME_WIDTH, FRAME_WIDTH, FRAME_WIDTH + cornerSize, FRAME_WIDTH);
+    frameGraphics.lineBetween(FRAME_WIDTH, FRAME_WIDTH + cornerSize, FRAME_WIDTH, FRAME_WIDTH);
+    frameGraphics.lineBetween(FRAME_WIDTH, FRAME_WIDTH, FRAME_WIDTH + cornerSize, FRAME_WIDTH);
     // Top-right of play area
-    graphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH - cornerSize, FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH, FRAME_WIDTH);
-    graphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH, FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH, FRAME_WIDTH + cornerSize);
+    frameGraphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH - cornerSize, FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH, FRAME_WIDTH);
+    frameGraphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH, FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH, FRAME_WIDTH + cornerSize);
     // Bottom-left
-    graphics.lineBetween(FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH - cornerSize, FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH);
-    graphics.lineBetween(FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH, FRAME_WIDTH + cornerSize, GAME_HEIGHT - FRAME_WIDTH);
+    frameGraphics.lineBetween(FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH - cornerSize, FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH);
+    frameGraphics.lineBetween(FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH, FRAME_WIDTH + cornerSize, GAME_HEIGHT - FRAME_WIDTH);
     // Bottom-right of play area
-    graphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH - cornerSize, GAME_HEIGHT - FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH);
-    graphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH - cornerSize, PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH);
+    frameGraphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH - cornerSize, GAME_HEIGHT - FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH);
+    frameGraphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH - cornerSize, PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH);
 
     // Panel title
     const titleText = this.add.text(PLAY_AREA_WIDTH + (GAME_WIDTH - PLAY_AREA_WIDTH) / 2, 30, 'BAMSTER', {
@@ -300,9 +306,9 @@ export class GameScene extends Phaser.Scene {
     });
     titleText.setOrigin(0.5);
 
-    // Decorative line under title
-    graphics.lineStyle(2, COLORS.textNeon, 0.8);
-    graphics.lineBetween(PLAY_AREA_WIDTH + 20, 55, GAME_WIDTH - 20, 55);
+    // Decorative line under title (use bgGraphics for panel decorations, they're behind UI elements)
+    bgGraphics.lineStyle(2, COLORS.textNeon, 0.8);
+    bgGraphics.lineBetween(PLAY_AREA_WIDTH + 20, 55, GAME_WIDTH - 20, 55);
   }
 
   private createPlayers(): void {

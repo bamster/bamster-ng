@@ -178,6 +178,10 @@ export class BlockSpawner {
     const block = new Block(this.scene, x, y, color);
     block.setFallSpeed(this.currentFallSpeed);
     this.blockGroup.add(block);
+
+    // Initialize cluster HP for the new block (so it has proper HP while falling)
+    this.clusterHp.set(block.clusterId, block.hp);
+
     return block;
   }
 

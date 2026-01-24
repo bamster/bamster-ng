@@ -1,6 +1,6 @@
 import { getGameSettings } from '../scenes/SettingsScene';
 
-type SoundType = 'laser' | 'hit' | 'explosion' | 'powerup' | 'jump' | 'damage';
+type SoundType = 'laser' | 'hit' | 'explosion' | 'powerup' | 'jump' | 'damage' | 'death';
 
 interface SoundConfig {
   frequency: number;
@@ -93,6 +93,9 @@ export class SoundManager {
         break;
       case 'damage':
         this.playDamage();
+        break;
+      case 'death':
+        this.playDeath();
         break;
     }
   }
@@ -263,6 +266,50 @@ export class SoundManager {
       gain: 0.3,
     });
     this.playNoise(0.1, 0.2);
+  }
+
+  /**
+   * Death sound - dramatic falling/game over jingle
+   * Descending chromatic slide with sad ending
+   */
+  private playDeath(): void {
+    // Descending chromatic fall
+    const fallNotes = [440, 392, 349, 311, 277, 247, 220, 196, 175];
+    fallNotes.forEach((freq, i) => {
+      this.playTone({
+        frequency: freq,
+        duration: 0.12,
+        type: 'square',
+        gain: 0.2,
+        delay: i * 0.1,
+      });
+    });
+
+    // Final sad chord
+    this.playTone({
+      frequency: 146, // D3
+      duration: 0.5,
+      type: 'sawtooth',
+      gain: 0.25,
+      delay: 0.9,
+    });
+    this.playTone({
+      frequency: 174, // F3
+      duration: 0.5,
+      type: 'sawtooth',
+      gain: 0.2,
+      delay: 0.9,
+    });
+    this.playTone({
+      frequency: 220, // A3
+      duration: 0.5,
+      type: 'sawtooth',
+      gain: 0.15,
+      delay: 0.9,
+    });
+
+    // Noise whoosh for falling
+    this.playNoise(1.0, 0.15);
   }
 }
 

@@ -1314,7 +1314,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleFallingBlockHit(player: Bamster, block: Block): void {
-    if (!player.isAlive || block.isResting) return;
+    if (!player.isAlive || player.isDying || block.isResting) return;
 
     // Block must be moving downward
     const blockBody = block.body as Phaser.Physics.Arcade.Body;
@@ -1885,13 +1885,34 @@ export class GameScene extends Phaser.Scene {
   }
 
   private checkGameOver(): void {
-    const alivePlayers = this.players.filter((p) => p.isAlive);
+    // Players that are still playing (not dead or dying)
+    const activePlayers = this.players.filter((p) => p.isAlive && !p.isDying);
+    // Players currently in death animation
+    const dyingPlayers = this.players.filter((p) => p.isDying && p.isAlive);
 
-    if (alivePlayers.length === 0) {
-      this.gameOver();
-    } else if (this.mode === 'local' && alivePlayers.length === 1) {
-      // In local multiplayer, game ends when one player remains
-      this.gameOver(alivePlayers[0]);
+    if (activePlayers.length === 0) {
+      if (dyingPlayers.length > 0) {
+        // Wait for death animations to complete before showing game over
+        // Check again when the dying player's animation completes
+        this.time.delayedCall(1600, () => {
+          if (!this.isGameOver) {
+            this.gameOver();
+          }
+        });
+      } else {
+        this.gameOver();
+      }
+    } else if (this.mode === 'local' && activePlayers.length === 1 && dyingPlayers.length === 0) {
+      // In local multiplayer, game ends when one player remains (and no one is dying)
+      this.gameOver(activePlayers[0]);
+    } else if (this.mode === 'local' && activePlayers.length === 1 && dyingPlayers.length > 0) {
+      // Wait for dying player's animation before declaring winner
+      this.time.delayedCall(1600, () => {
+        if (!this.isGameOver) {
+          const winner = this.players.find((p) => p.isAlive && !p.isDying);
+          this.gameOver(winner);
+        }
+      });
     }
   }
 
@@ -1926,7 +1947,7 @@ export class GameScene extends Phaser.Scene {
     // Check if any player is crushed by blocks stacking on top of them
     // This should only trigger when a player is truly sandwiched between ground and block
     this.players.forEach((player) => {
-      if (!player.isAlive) return;
+      if (!player.isAlive || player.isDying) return;
 
       const playerBody = player.body as Phaser.Physics.Arcade.Body;
 
@@ -1974,7 +1995,7 @@ export class GameScene extends Phaser.Scene {
     if (blocksAtTop.length > 0) {
       // Kill all players - blocks have reached the top
       this.players.forEach((player) => {
-        if (player.isAlive) {
+        if (player.isAlive && !player.isDying) {
           player.die();
         }
       });
@@ -2039,7 +2060,7 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerInput(): void {
     // Player 1
     const player1 = this.players[0];
-    if (player1 && player1.isAlive) {
+    if (player1 && player1.isAlive && !player1.isDying) {
       const input1 = this.inputManager.getPlayer1Input();
 
       if (input1.left) {
@@ -2062,7 +2083,7 @@ export class GameScene extends Phaser.Scene {
     // Player 2 (local multiplayer only)
     if (this.mode === 'local') {
       const player2 = this.players[1];
-      if (player2 && player2.isAlive) {
+      if (player2 && player2.isAlive && !player2.isDying) {
         const input2 = this.inputManager.getPlayer2Input();
 
         if (input2.left) {

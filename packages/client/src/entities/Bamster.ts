@@ -23,6 +23,7 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   public weaponType: WeaponType = 'basic';
   public score: number = 0;
   public isAlive: boolean = true;
+  public isDying: boolean = false;
   public facingRight: boolean = true;
 
   private lastFireTime: number = 0;
@@ -240,9 +241,11 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   }
 
   die(): void {
-    this.isAlive = false;
-    this.setActive(false);
-    this.setVisible(false);
+    if (this.isDying) return; // Prevent multiple death triggers
+    this.isDying = true;
+
+    // Play death sound
+    getSound().play('death');
 
     // Clean up timers
     if (this.sneakersTimer) {
@@ -251,6 +254,34 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     if (this.weaponTimer) {
       this.weaponTimer.destroy();
     }
+
+    // Disable physics collisions during death
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.checkCollision.none = true;
+
+    // Death animation - tumble and fall off screen
+    this.scene.tweens.add({
+      targets: this,
+      angle: { from: 0, to: 720 }, // 2 full spins
+      y: this.scene.scale.height + 100, // Fall below screen
+      duration: 1500,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        this.isAlive = false;
+        this.setActive(false);
+        this.setVisible(false);
+      },
+    });
+
+    // Shrink and fade while falling
+    this.scene.tweens.add({
+      targets: this,
+      alpha: 0,
+      scaleX: 0.3,
+      scaleY: 0.3,
+      duration: 1500,
+      ease: 'Quad.easeIn',
+    });
   }
 
   addScore(points: number): void {

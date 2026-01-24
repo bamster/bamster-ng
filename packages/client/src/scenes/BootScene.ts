@@ -7,35 +7,64 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Show loading progress
-    const progressBar = this.add.graphics();
-    const progressBox = this.add.graphics();
-    progressBox.fillStyle(0x222222, 0.8);
-    progressBox.fillRect(240, 270, 320, 50);
-
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
-    const loadingText = this.make.text({
-      x: width / 2,
-      y: height / 2 - 50,
-      text: 'Loading...',
-      style: {
-        font: '20px monospace',
-        color: '#ffffff',
-      },
+
+    // Dark 80s background
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a1a, 1);
+    bg.fillRect(0, 0, width, height);
+
+    // Grid effect
+    bg.lineStyle(1, 0xff00ff, 0.1);
+    for (let x = 0; x < width; x += 40) {
+      bg.lineBetween(x, 0, x, height);
+    }
+    for (let y = 0; y < height; y += 40) {
+      bg.lineBetween(0, y, width, y);
+    }
+
+    // Title
+    const title = this.add.text(width / 2, height / 2 - 80, 'BAMSTER', {
+      fontSize: '48px',
+      fontFamily: 'monospace',
+      color: '#ff00ff',
+      stroke: '#ff88ff',
+      strokeThickness: 3,
     });
-    loadingText.setOrigin(0.5, 0.5);
+    title.setOrigin(0.5);
+
+    // Loading text
+    const loadingText = this.add.text(width / 2, height / 2 - 20, 'LOADING...', {
+      fontSize: '16px',
+      fontFamily: 'monospace',
+      color: '#00ffff',
+    });
+    loadingText.setOrigin(0.5);
+
+    // Progress bar container
+    const progressBox = this.add.graphics();
+    progressBox.lineStyle(2, 0xff00ff, 1);
+    progressBox.strokeRect(width / 2 - 160, height / 2 + 10, 320, 30);
+
+    // Progress bar fill
+    const progressBar = this.add.graphics();
 
     this.load.on('progress', (value: number) => {
       progressBar.clear();
-      progressBar.fillStyle(0xffffff, 1);
-      progressBar.fillRect(250, 280, 300 * value, 30);
+      // Neon gradient effect
+      progressBar.fillStyle(0xff00ff, 1);
+      progressBar.fillRect(width / 2 - 158, height / 2 + 12, 316 * value, 26);
+      progressBar.fillStyle(0x00ffff, 0.5);
+      progressBar.fillRect(width / 2 - 158, height / 2 + 12, 316 * value, 13);
     });
 
     this.load.on('complete', () => {
       progressBar.destroy();
       progressBox.destroy();
       loadingText.destroy();
+      title.destroy();
+      bg.destroy();
     });
 
     // Generate colored block textures
@@ -60,34 +89,52 @@ export class BootScene extends Phaser.Scene {
   }
 
   private generateBlockTextures(): void {
+    // 80s neon color palette
     const colorMap: Record<string, number> = {
-      red: 0xff4444,
-      blue: 0x4444ff,
-      green: 0x44ff44,
-      yellow: 0xffff44,
-      purple: 0xaa44ff,
+      magenta: 0xff00ff,
+      cyan: 0x00ffff,
+      lime: 0x39ff14,
+      orange: 0xff6600,
+      violet: 0xbf00ff,
+    };
+
+    // Darker shades for 3D effect
+    const darkMap: Record<string, number> = {
+      magenta: 0xaa00aa,
+      cyan: 0x00aaaa,
+      lime: 0x22aa00,
+      orange: 0xaa4400,
+      violet: 0x8800aa,
     };
 
     BLOCK_COLORS.forEach((color) => {
       const graphics = this.make.graphics({ x: 0, y: 0 });
 
-      // Main block fill
-      graphics.fillStyle(colorMap[color], 1);
-      graphics.fillRect(0, 0, BLOCK_SIZE, BLOCK_SIZE);
+      // Get color with fallback
+      const mainColor = colorMap[color] ?? 0xff00ff;
+      const darkColor = darkMap[color] ?? 0xaa00aa;
 
-      // Highlight (top and left edges)
-      graphics.fillStyle(0xffffff, 0.3);
-      graphics.fillRect(0, 0, BLOCK_SIZE, 4);
-      graphics.fillRect(0, 0, 4, BLOCK_SIZE);
+      // Main block fill with slight gradient effect
+      graphics.fillStyle(mainColor, 1);
+      graphics.fillRect(2, 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
 
-      // Shadow (bottom and right edges)
-      graphics.fillStyle(0x000000, 0.3);
-      graphics.fillRect(0, BLOCK_SIZE - 4, BLOCK_SIZE, 4);
-      graphics.fillRect(BLOCK_SIZE - 4, 0, 4, BLOCK_SIZE);
+      // Bright highlight (top and left edges) - neon glow effect
+      graphics.fillStyle(0xffffff, 0.6);
+      graphics.fillRect(2, 2, BLOCK_SIZE - 4, 3);
+      graphics.fillRect(2, 2, 3, BLOCK_SIZE - 4);
 
-      // Border
-      graphics.lineStyle(2, 0x000000, 0.5);
+      // Dark shadow (bottom and right edges)
+      graphics.fillStyle(darkColor, 1);
+      graphics.fillRect(2, BLOCK_SIZE - 5, BLOCK_SIZE - 4, 3);
+      graphics.fillRect(BLOCK_SIZE - 5, 2, 3, BLOCK_SIZE - 4);
+
+      // Outer border - dark
+      graphics.lineStyle(2, 0x111111, 1);
       graphics.strokeRect(0, 0, BLOCK_SIZE, BLOCK_SIZE);
+
+      // Inner glow border
+      graphics.lineStyle(1, mainColor, 0.5);
+      graphics.strokeRect(3, 3, BLOCK_SIZE - 6, BLOCK_SIZE - 6);
 
       graphics.generateTexture(`block_${color}`, BLOCK_SIZE, BLOCK_SIZE);
       graphics.destroy();
@@ -95,108 +142,170 @@ export class BootScene extends Phaser.Scene {
   }
 
   private generateBamsterTexture(): void {
+    // Generate right-facing frames (idle, running, jump, fall)
+    this.generateBamsterFrame('bamster', false, 'idle');
+    this.generateBamsterFrame('bamster_jump', false, 'jump');
+    this.generateBamsterFrame('bamster_fall', false, 'fall');
+    // Generate left-facing frames
+    this.generateBamsterFrame('bamster_left', true, 'idle');
+    this.generateBamsterFrame('bamster_left_jump', true, 'jump');
+    this.generateBamsterFrame('bamster_left_fall', true, 'fall');
+  }
+
+  private generateBamsterFrame(textureName: string, flipX: boolean, state: 'idle' | 'jump' | 'fall'): void {
     const graphics = this.make.graphics({ x: 0, y: 0 });
+    const baseX = flipX ? 32 : 24;
+    const spriteWidth = 56;
+    const spriteHeight = 52;
+
+    // Cape direction based on state
+    // idle: cape hangs down, jump: cape streams up (going up fast), fall: cape streams up dramatically
+    const capeDir = flipX ? 1 : -1;
+
+    // Draw cape first (behind body)
+    graphics.fillStyle(0xcc0000, 1); // Dark red base
+
+    if (state === 'idle') {
+      // Cape hangs down with slight wave
+      graphics.fillTriangle(
+        baseX + capeDir * 6, 14,                    // neck attachment
+        baseX + capeDir * 28, 42,                   // bottom corner (flows behind)
+        baseX + capeDir * 8, 40                     // bottom near body
+      );
+      // Brighter highlight layer
+      graphics.fillStyle(0xff3333, 1);
+      graphics.fillTriangle(
+        baseX + capeDir * 6, 14,
+        baseX + capeDir * 22, 36,
+        baseX + capeDir * 8, 34
+      );
+    } else if (state === 'jump') {
+      // Cape streams horizontally/slightly up (jumping up)
+      graphics.fillTriangle(
+        baseX + capeDir * 6, 14,                    // neck attachment
+        baseX + capeDir * 40, 18,                   // streams out flat
+        baseX + capeDir * 35, 28                    // bottom edge
+      );
+      graphics.fillStyle(0xff3333, 1);
+      graphics.fillTriangle(
+        baseX + capeDir * 6, 14,
+        baseX + capeDir * 35, 16,
+        baseX + capeDir * 30, 24
+      );
+    } else {
+      // Cape streams upward dramatically (falling)
+      graphics.fillTriangle(
+        baseX + capeDir * 6, 14,                    // neck attachment
+        baseX + capeDir * 35, -8,                   // streams up above head
+        baseX + capeDir * 28, 8                     // mid point
+      );
+      graphics.fillStyle(0xff3333, 1);
+      graphics.fillTriangle(
+        baseX + capeDir * 6, 14,
+        baseX + capeDir * 30, -4,
+        baseX + capeDir * 24, 6
+      );
+    }
 
     // Body (hamster-like shape)
-    graphics.fillStyle(0xd4a574, 1); // Tan/brown color
-    graphics.fillEllipse(20, 24, 32, 28); // Body
+    graphics.fillStyle(0xd4a574, 1);
+    graphics.fillEllipse(baseX, 26, 32, 28);
 
     // Head
-    graphics.fillStyle(0xd4a574, 1);
-    graphics.fillCircle(20, 12, 12);
+    graphics.fillCircle(baseX, 14, 12);
 
     // Ears
-    graphics.fillStyle(0xffb6c1, 1); // Pink inner ear
-    graphics.fillCircle(10, 4, 5);
-    graphics.fillCircle(30, 4, 5);
+    graphics.fillStyle(0xffb6c1, 1);
+    graphics.fillCircle(baseX - 10, 6, 5);
+    graphics.fillCircle(baseX + 10, 6, 5);
     graphics.fillStyle(0xd4a574, 1);
-    graphics.fillCircle(10, 4, 3);
-    graphics.fillCircle(30, 4, 3);
+    graphics.fillCircle(baseX - 10, 6, 3);
+    graphics.fillCircle(baseX + 10, 6, 3);
 
     // Eyes
     graphics.fillStyle(0x000000, 1);
-    graphics.fillCircle(15, 10, 3);
-    graphics.fillCircle(25, 10, 3);
+    graphics.fillCircle(baseX - 5, 12, 3);
+    graphics.fillCircle(baseX + 5, 12, 3);
 
     // Eye shine
     graphics.fillStyle(0xffffff, 1);
-    graphics.fillCircle(16, 9, 1);
-    graphics.fillCircle(26, 9, 1);
+    graphics.fillCircle(baseX - 4, 11, 1);
+    graphics.fillCircle(baseX + 6, 11, 1);
 
     // Nose
     graphics.fillStyle(0xffb6c1, 1);
-    graphics.fillCircle(20, 15, 2);
+    graphics.fillCircle(baseX, 17, 2);
 
     // Cheeks
     graphics.fillStyle(0xffcccb, 0.5);
-    graphics.fillCircle(10, 14, 4);
-    graphics.fillCircle(30, 14, 4);
+    graphics.fillCircle(baseX - 10, 16, 4);
+    graphics.fillCircle(baseX + 10, 16, 4);
 
     // Belly
     graphics.fillStyle(0xf5deb3, 1);
-    graphics.fillEllipse(20, 28, 16, 14);
+    graphics.fillEllipse(baseX, 30, 16, 14);
 
-    // Legs
+    // Legs - position based on state
     graphics.fillStyle(0xd4a574, 1);
-    graphics.fillEllipse(12, 38, 6, 6);
-    graphics.fillEllipse(28, 38, 6, 6);
+    if (state === 'jump') {
+      // Legs tucked up when jumping
+      graphics.fillEllipse(baseX - 6, 38, 6, 5);
+      graphics.fillEllipse(baseX + 6, 38, 6, 5);
+    } else if (state === 'fall') {
+      // Legs spread when falling
+      graphics.fillEllipse(baseX - 10, 40, 6, 5);
+      graphics.fillEllipse(baseX + 10, 40, 6, 5);
+    } else {
+      // Normal standing legs
+      graphics.fillEllipse(baseX - 8, 40, 6, 6);
+      graphics.fillEllipse(baseX + 8, 40, 6, 6);
+    }
+
+    // Feet
+    graphics.fillStyle(0xc49464, 1);
+    if (state === 'jump') {
+      graphics.fillEllipse(baseX - 6, 42, 5, 3);
+      graphics.fillEllipse(baseX + 6, 42, 5, 3);
+    } else if (state === 'fall') {
+      graphics.fillEllipse(baseX - 10, 44, 5, 3);
+      graphics.fillEllipse(baseX + 10, 44, 5, 3);
+    } else {
+      graphics.fillEllipse(baseX - 8, 44, 5, 3);
+      graphics.fillEllipse(baseX + 8, 44, 5, 3);
+    }
 
     // Laser pistol
-    graphics.fillStyle(0x666666, 1);
-    graphics.fillRect(34, 20, 10, 6);
-    graphics.fillStyle(0xff0000, 1);
-    graphics.fillRect(42, 21, 4, 4);
+    const gunX = flipX ? baseX - 22 : baseX + 14;
+    graphics.fillStyle(0x444444, 1);
+    graphics.fillRect(gunX, 22, 10, 6);
+    // Neon glow on gun
+    graphics.fillStyle(0xff00ff, 1);
+    graphics.fillRect(flipX ? gunX : gunX + 8, 23, 3, 4);
 
-    graphics.generateTexture('bamster', 48, 44);
+    graphics.generateTexture(textureName, spriteWidth, spriteHeight);
     graphics.destroy();
-
-    // Generate flipped version for left-facing
-    const graphicsLeft = this.make.graphics({ x: 0, y: 0 });
-    graphicsLeft.fillStyle(0xd4a574, 1);
-    graphicsLeft.fillEllipse(28, 24, 32, 28);
-    graphicsLeft.fillCircle(28, 12, 12);
-    graphicsLeft.fillStyle(0xffb6c1, 1);
-    graphicsLeft.fillCircle(18, 4, 5);
-    graphicsLeft.fillCircle(38, 4, 5);
-    graphicsLeft.fillStyle(0xd4a574, 1);
-    graphicsLeft.fillCircle(18, 4, 3);
-    graphicsLeft.fillCircle(38, 4, 3);
-    graphicsLeft.fillStyle(0x000000, 1);
-    graphicsLeft.fillCircle(23, 10, 3);
-    graphicsLeft.fillCircle(33, 10, 3);
-    graphicsLeft.fillStyle(0xffffff, 1);
-    graphicsLeft.fillCircle(22, 9, 1);
-    graphicsLeft.fillCircle(32, 9, 1);
-    graphicsLeft.fillStyle(0xffb6c1, 1);
-    graphicsLeft.fillCircle(28, 15, 2);
-    graphicsLeft.fillStyle(0xffcccb, 0.5);
-    graphicsLeft.fillCircle(18, 14, 4);
-    graphicsLeft.fillCircle(38, 14, 4);
-    graphicsLeft.fillStyle(0xf5deb3, 1);
-    graphicsLeft.fillEllipse(28, 28, 16, 14);
-    graphicsLeft.fillStyle(0xd4a574, 1);
-    graphicsLeft.fillEllipse(20, 38, 6, 6);
-    graphicsLeft.fillEllipse(36, 38, 6, 6);
-    graphicsLeft.fillStyle(0x666666, 1);
-    graphicsLeft.fillRect(4, 20, 10, 6);
-    graphicsLeft.fillStyle(0xff0000, 1);
-    graphicsLeft.fillRect(2, 21, 4, 4);
-    graphicsLeft.generateTexture('bamster_left', 48, 44);
-    graphicsLeft.destroy();
   }
 
   private generateLaserTexture(): void {
     const graphics = this.make.graphics({ x: 0, y: 0 });
 
-    // Laser beam
-    graphics.fillStyle(0xff0000, 1);
-    graphics.fillRect(0, 2, 16, 4);
+    // Outer glow - neon pink
+    graphics.fillStyle(0xff00ff, 0.3);
+    graphics.fillRect(0, 0, 20, 10);
 
-    // Glow effect
-    graphics.fillStyle(0xff6666, 0.5);
-    graphics.fillRect(0, 0, 16, 8);
+    // Middle glow
+    graphics.fillStyle(0xff44ff, 0.6);
+    graphics.fillRect(1, 2, 18, 6);
 
-    graphics.generateTexture('laser', 16, 8);
+    // Core beam - bright white/pink
+    graphics.fillStyle(0xffaaff, 1);
+    graphics.fillRect(2, 3, 16, 4);
+
+    // Hot center
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillRect(3, 4, 14, 2);
+
+    graphics.generateTexture('laser', 20, 10);
     graphics.destroy();
   }
 

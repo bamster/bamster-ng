@@ -51,11 +51,11 @@ export class InputManager {
       D: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
 
-    // Shoot key (Z)
-    this.shootKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
-
-    // Space key for jump
+    // Shoot key (Space)
     this.spaceKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+    // Additional shoot key (Z)
+    this.shootKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
 
     // Player 2 keys
     this.p2Keys = {
@@ -82,9 +82,8 @@ export class InputManager {
       right: this.cursors.right.isDown || this.wasd.D.isDown,
       jump:
         Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
-        Phaser.Input.Keyboard.JustDown(this.wasd.W) ||
-        Phaser.Input.Keyboard.JustDown(this.spaceKey),
-      shoot: this.shootKey.isDown || this.isMouseDown,
+        Phaser.Input.Keyboard.JustDown(this.wasd.W),
+      shoot: this.spaceKey.isDown || this.shootKey.isDown || this.isMouseDown,
     };
   }
 
@@ -101,8 +100,7 @@ export class InputManager {
     if (playerId === 'player1') {
       return (
         Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
-        Phaser.Input.Keyboard.JustDown(this.wasd.W) ||
-        Phaser.Input.Keyboard.JustDown(this.spaceKey)
+        Phaser.Input.Keyboard.JustDown(this.wasd.W)
       );
     } else {
       return Phaser.Input.Keyboard.JustDown(this.p2Keys.I);

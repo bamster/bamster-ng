@@ -7,7 +7,8 @@ import {
   SPREAD_SHOT_ANGLE,
   SNEAKERS_JUMP_MULTIPLIER,
   POWERUP_DURATION,
-  GAME_WIDTH,
+  PLAY_AREA_WIDTH,
+  FRAME_WIDTH,
 } from '@bamster/shared';
 import type { WeaponType } from '@bamster/shared';
 import { Laser } from './Laser';
@@ -225,13 +226,18 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
       this.canJump = true;
     }
 
-    // Keep within horizontal bounds
+    // Update sprite based on velocity (cape animation)
+    this.updateSprite(body.velocity.y, onGround);
+
+    // Keep within play area horizontal bounds (accounting for frame)
     const halfWidth = 16; // Half of sprite width
-    if (this.x < halfWidth) {
-      this.x = halfWidth;
+    const minX = FRAME_WIDTH + halfWidth;
+    const maxX = PLAY_AREA_WIDTH - FRAME_WIDTH - halfWidth;
+    if (this.x < minX) {
+      this.x = minX;
       this.setVelocityX(0);
-    } else if (this.x > GAME_WIDTH - halfWidth) {
-      this.x = GAME_WIDTH - halfWidth;
+    } else if (this.x > maxX) {
+      this.x = maxX;
       this.setVelocityX(0);
     }
 
@@ -240,6 +246,29 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
       if (this.isAlive) {
         this.die();
       }
+    }
+  }
+
+  private updateSprite(velocityY: number, onGround: boolean): void {
+    let textureName: string;
+
+    if (onGround) {
+      // On ground - use normal sprite
+      textureName = this.facingRight ? 'bamster' : 'bamster_left';
+    } else if (velocityY < -50) {
+      // Going up (jumping) - use jump sprite
+      textureName = this.facingRight ? 'bamster_jump' : 'bamster_left_jump';
+    } else if (velocityY > 50) {
+      // Falling - use fall sprite
+      textureName = this.facingRight ? 'bamster_fall' : 'bamster_left_fall';
+    } else {
+      // Near apex of jump - use normal sprite
+      textureName = this.facingRight ? 'bamster' : 'bamster_left';
+    }
+
+    // Only change if different to avoid unnecessary updates
+    if (this.texture.key !== textureName) {
+      this.setTexture(textureName);
     }
   }
 }

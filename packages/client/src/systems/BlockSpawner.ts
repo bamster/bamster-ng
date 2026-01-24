@@ -4,13 +4,15 @@ import {
   BLOCK_COLORS,
   BLOCK_SPAWN_INTERVAL,
   BLOCK_SPAWN_INTERVAL_MIN,
+  BLOCK_SPAWN_INTERVAL_DECREASE,
   BLOCK_FALL_SPEED,
   BLOCK_FALL_SPEED_INCREMENT,
   POWERUP_SPAWN_CHANCE,
   SCORE_PER_BLOCK,
   COMBO_MULTIPLIER,
-  GAME_WIDTH,
+  PLAY_AREA_WIDTH,
   GAME_HEIGHT,
+  FRAME_WIDTH,
 } from '@bamster/shared';
 import type { BlockColor, PowerUpType } from '@bamster/shared';
 import { Block } from '../entities/Block';
@@ -25,6 +27,9 @@ export class BlockSpawner {
   private currentFallSpeed: number = BLOCK_FALL_SPEED;
   private currentSpawnInterval: number = BLOCK_SPAWN_INTERVAL;
 
+  // Track HP per cluster (merged blocks share HP pool)
+  private clusterHp: Map<string, number> = new Map();
+
   constructor(
     scene: Phaser.Scene,
     blockGroup: Phaser.Physics.Arcade.Group,
@@ -36,16 +41,56 @@ export class BlockSpawner {
     this.gameStartTime = scene.time.now;
   }
 
+  // Get cluster HP
+  getClusterHp(clusterId: string): number {
+    return this.clusterHp.get(clusterId) ?? 0;
+  }
+
+  // Damage a cluster, returns true if cluster is destroyed
+  damageCluster(clusterId: string, damage: number = 1): boolean {
+    const currentHp = this.clusterHp.get(clusterId) ?? 0;
+    const newHp = currentHp - damage;
+
+    if (newHp <= 0) {
+      this.clusterHp.delete(clusterId);
+      return true; // Cluster destroyed
+    }
+
+    this.clusterHp.set(clusterId, newHp);
+
+    // Update HP display on all blocks in cluster
+    const blocks = this.getBlocksInCluster(clusterId);
+    blocks.forEach(block => {
+      block.hp = newHp;
+      block.maxHp = newHp; // Update so display shows correct ratio
+    });
+
+    return false;
+  }
+
+  // Get all blocks in a cluster
+  getBlocksInCluster(clusterId: string): Block[] {
+    return this.blockGroup.children
+      .getArray()
+      .filter((b) => (b as Block).clusterId === clusterId) as Block[];
+  }
+
+  // Get block count in a cluster
+  getClusterSize(clusterId: string): number {
+    return this.getBlocksInCluster(clusterId).length;
+  }
+
   start(): void {
     this.scheduleNextSpawn();
   }
 
   createInitialFloor(rows: number = 2): void {
-    const gridColumns = Math.floor(GAME_WIDTH / BLOCK_SIZE);
+    const usableWidth = PLAY_AREA_WIDTH - FRAME_WIDTH * 2;
+    const gridColumns = Math.floor(usableWidth / BLOCK_SIZE);
 
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < gridColumns; col++) {
-        const x = col * BLOCK_SIZE + BLOCK_SIZE / 2;
+        const x = FRAME_WIDTH + col * BLOCK_SIZE + BLOCK_SIZE / 2;
         const y = GAME_HEIGHT - BLOCK_SIZE / 2 - row * BLOCK_SIZE;
 
         const color = BLOCK_COLORS[
@@ -82,10 +127,11 @@ export class BlockSpawner {
   }
 
   private spawn(): void {
-    // Calculate random X position (grid-aligned)
-    const gridColumns = Math.floor(GAME_WIDTH / BLOCK_SIZE);
+    // Calculate random X position (grid-aligned within play area)
+    const usableWidth = PLAY_AREA_WIDTH - FRAME_WIDTH * 2;
+    const gridColumns = Math.floor(usableWidth / BLOCK_SIZE);
     const column = Phaser.Math.Between(0, gridColumns - 1);
-    const x = column * BLOCK_SIZE + BLOCK_SIZE / 2;
+    const x = FRAME_WIDTH + column * BLOCK_SIZE + BLOCK_SIZE / 2;
     const y = -BLOCK_SIZE;
 
     // Chance to spawn power-up instead
@@ -130,7 +176,7 @@ export class BlockSpawner {
     // Decrease spawn interval over time (faster spawning)
     this.currentSpawnInterval = Math.max(
       BLOCK_SPAWN_INTERVAL_MIN,
-      BLOCK_SPAWN_INTERVAL - elapsedMinutes * 200
+      BLOCK_SPAWN_INTERVAL - elapsedMinutes * BLOCK_SPAWN_INTERVAL_DECREASE
     );
 
     // Update existing falling blocks
@@ -193,6 +239,25 @@ export class BlockSpawner {
         }
       }
 
+      // Calculate new cluster HP: sum all merging cluster HPs + 1 for each merge
+      const mergingClusterIds = new Set<string>([block.clusterId]);
+      adjacentSameColor.forEach(other => mergingClusterIds.add(other.clusterId));
+
+      let totalHp = 0;
+      let blockCount = 0;
+      mergingClusterIds.forEach(clusterId => {
+        totalHp += this.clusterHp.get(clusterId) ?? block.hp;
+        blockCount += this.getClusterSize(clusterId);
+        if (clusterId !== targetClusterId) {
+          this.clusterHp.delete(clusterId); // Clean up old cluster HP
+        }
+      });
+
+      // Add +1 HP for each additional block beyond the first (merge bonus)
+      const mergeBonus = blockCount - 1;
+      const newClusterHp = totalHp + mergeBonus;
+      this.clusterHp.set(targetClusterId, newClusterHp);
+
       // Merge all into the target cluster
       block.mergeIntoCluster(targetClusterId);
       for (const other of adjacentSameColor) {
@@ -205,6 +270,16 @@ export class BlockSpawner {
         });
         other.mergeIntoCluster(targetClusterId);
       }
+
+      // Update HP display on all blocks in cluster
+      const clusterBlocks = this.getBlocksInCluster(targetClusterId);
+      clusterBlocks.forEach(b => {
+        b.hp = newClusterHp;
+        b.maxHp = newClusterHp;
+      });
+    } else {
+      // No merge - initialize this block's cluster HP
+      this.clusterHp.set(block.clusterId, block.hp);
     }
   }
 

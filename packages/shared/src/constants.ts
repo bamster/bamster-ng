@@ -1,20 +1,33 @@
 // Game dimensions
 export const GAME_WIDTH = 800;
 export const GAME_HEIGHT = 600;
+export const PLAY_AREA_WIDTH = 560; // Narrower play area, rest is for UI
+export const FRAME_WIDTH = 4;
 
 // Physics
 export const GRAVITY = 800;
 export const BAMSTER_SPEED = 200;
 export const BAMSTER_JUMP_VELOCITY = -400;
-export const BLOCK_FALL_SPEED = 100;
-export const BLOCK_FALL_SPEED_INCREMENT = 5; // Speed increase per minute
+export const BLOCK_FALL_SPEED = 120;
+export const BLOCK_FALL_SPEED_INCREMENT = 15; // Speed increase per minute
 export const LASER_SPEED = 600;
 
 // Block settings
 export const BLOCK_SIZE = 40;
-export const BLOCK_COLORS = ['red', 'blue', 'green', 'yellow', 'purple'] as const;
-export const BLOCK_SPAWN_INTERVAL = 2000; // ms
-export const BLOCK_SPAWN_INTERVAL_MIN = 500; // minimum ms between spawns
+// 80s neon colors
+export const BLOCK_COLORS = ['magenta', 'cyan', 'lime', 'orange', 'violet'] as const;
+
+// Block HP by color (how many hits to destroy)
+export const BLOCK_HP: Record<string, number> = {
+  magenta: 3,
+  cyan: 2,
+  lime: 2,
+  orange: 3,
+  violet: 4,
+};
+export const BLOCK_SPAWN_INTERVAL = 1200; // ms - starting interval
+export const BLOCK_SPAWN_INTERVAL_MIN = 400; // minimum ms between spawns
+export const BLOCK_SPAWN_INTERVAL_DECREASE = 300; // ms decrease per minute
 
 // Power-up settings
 export const POWERUP_DURATION = 30000; // 30 seconds for timed power-ups
@@ -40,8 +53,8 @@ export const PLAYER1_KEYS = {
   left: 'LEFT',
   right: 'RIGHT',
   up: 'UP',
-  jump: 'SPACE',
-  shoot: 'Z',
+  jump: 'UP',
+  shoot: 'SPACE',
 } as const;
 
 export const PLAYER2_KEYS = {

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, BLOCK_SIZE } from '@bamster/shared';
+import { GAME_WIDTH, GAME_HEIGHT, BLOCK_SIZE, PLAY_AREA_WIDTH, FRAME_WIDTH } from '@bamster/shared';
 import type { GameMode } from './MenuScene';
 import { Bamster } from '../entities/Bamster';
 import { Block } from '../entities/Block';
@@ -7,6 +7,19 @@ import { Laser } from '../entities/Laser';
 import { PowerUp } from '../entities/PowerUp';
 import { BlockSpawner } from '../systems/BlockSpawner';
 import { InputManager } from '../systems/InputManager';
+
+// 80s color palette
+const COLORS = {
+  background: 0x0a0a1a,
+  frameDark: 0x1a0a2e,
+  frameLight: 0x3d1a5c,
+  frameNeon: 0xff00ff,
+  panelBg: 0x120824,
+  textNeon: 0x00ffff,
+  textPink: 0xff00ff,
+  textYellow: 0xffff00,
+  ground: 0x2a1a3e,
+};
 
 interface GameSceneData {
   mode: GameMode;
@@ -46,6 +59,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Draw retro background and frame
+    this.createRetroFrame();
+
     // Create physics groups
     this.blockGroup = this.physics.add.group();
     this.laserGroup = this.physics.add.group({
@@ -55,16 +71,16 @@ export class GameScene extends Phaser.Scene {
       allowGravity: false,
     });
 
-    // Create ground (platform at bottom of screen)
+    // Create ground (platform at bottom of play area)
     this.ground = this.physics.add.staticGroup();
     const groundRect = this.add.rectangle(
-      GAME_WIDTH / 2,
+      PLAY_AREA_WIDTH / 2,
       GAME_HEIGHT - BLOCK_SIZE / 2,
-      GAME_WIDTH,
+      PLAY_AREA_WIDTH,
       BLOCK_SIZE,
-      0x333344
+      COLORS.ground
     );
-    this.physics.add.existing(groundRect, true); // true = static body
+    this.physics.add.existing(groundRect, true);
     this.ground.add(groundRect);
 
     // Create input manager
@@ -83,18 +99,76 @@ export class GameScene extends Phaser.Scene {
     // Setup collisions
     this.setupCollisions();
 
-    // Create UI
+    // Create UI (now in side panel)
     this.createUI();
 
     // Start spawning blocks
     this.blockSpawner.start();
   }
 
+  private createRetroFrame(): void {
+    const graphics = this.add.graphics();
+
+    // Dark background
+    graphics.fillStyle(COLORS.background, 1);
+    graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // Play area background (slightly lighter)
+    graphics.fillStyle(0x0f0f2a, 1);
+    graphics.fillRect(FRAME_WIDTH, FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH * 2, GAME_HEIGHT - FRAME_WIDTH * 2);
+
+    // Side panel background
+    graphics.fillStyle(COLORS.panelBg, 1);
+    graphics.fillRect(PLAY_AREA_WIDTH, 0, GAME_WIDTH - PLAY_AREA_WIDTH, GAME_HEIGHT);
+
+    // Outer frame - neon glow effect
+    graphics.lineStyle(FRAME_WIDTH, COLORS.frameNeon, 0.8);
+    graphics.strokeRect(2, 2, PLAY_AREA_WIDTH - 4, GAME_HEIGHT - 4);
+
+    // Inner frame highlight
+    graphics.lineStyle(2, COLORS.frameLight, 1);
+    graphics.strokeRect(FRAME_WIDTH + 2, FRAME_WIDTH + 2, PLAY_AREA_WIDTH - FRAME_WIDTH * 2 - 4, GAME_HEIGHT - FRAME_WIDTH * 2 - 4);
+
+    // Panel divider with neon line
+    graphics.lineStyle(3, COLORS.frameNeon, 0.6);
+    graphics.lineBetween(PLAY_AREA_WIDTH, 0, PLAY_AREA_WIDTH, GAME_HEIGHT);
+
+    // Decorative corner accents
+    const cornerSize = 20;
+    graphics.lineStyle(2, COLORS.textNeon, 1);
+    // Top-left
+    graphics.lineBetween(FRAME_WIDTH, FRAME_WIDTH + cornerSize, FRAME_WIDTH, FRAME_WIDTH);
+    graphics.lineBetween(FRAME_WIDTH, FRAME_WIDTH, FRAME_WIDTH + cornerSize, FRAME_WIDTH);
+    // Top-right of play area
+    graphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH - cornerSize, FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH, FRAME_WIDTH);
+    graphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH, FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH, FRAME_WIDTH + cornerSize);
+    // Bottom-left
+    graphics.lineBetween(FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH - cornerSize, FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH);
+    graphics.lineBetween(FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH, FRAME_WIDTH + cornerSize, GAME_HEIGHT - FRAME_WIDTH);
+    // Bottom-right of play area
+    graphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH - cornerSize, GAME_HEIGHT - FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH);
+    graphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH - cornerSize, PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH);
+
+    // Panel title
+    const titleText = this.add.text(PLAY_AREA_WIDTH + (GAME_WIDTH - PLAY_AREA_WIDTH) / 2, 30, 'BAMSTER', {
+      fontSize: '28px',
+      fontFamily: 'monospace',
+      color: '#ff00ff',
+      stroke: '#ff88ff',
+      strokeThickness: 2,
+    });
+    titleText.setOrigin(0.5);
+
+    // Decorative line under title
+    graphics.lineStyle(2, COLORS.textNeon, 0.8);
+    graphics.lineBetween(PLAY_AREA_WIDTH + 20, 55, GAME_WIDTH - 20, 55);
+  }
+
   private createPlayers(): void {
-    // Player 1
+    // Player 1 - position within play area
     const player1 = new Bamster(
       this,
-      GAME_WIDTH / 4,
+      PLAY_AREA_WIDTH / 4,
       GAME_HEIGHT - 100,
       'player1',
       this.laserGroup
@@ -105,7 +179,7 @@ export class GameScene extends Phaser.Scene {
     if (this.mode === 'local') {
       const player2 = new Bamster(
         this,
-        (GAME_WIDTH * 3) / 4,
+        (PLAY_AREA_WIDTH * 3) / 4,
         GAME_HEIGHT - 100,
         'player2',
         this.laserGroup
@@ -241,7 +315,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleLaserBlockCollision(laser: Laser, block: Block): void {
-
     if (!laser.hitBlock(block.blockId)) {
       return; // Already hit this block
     }
@@ -249,14 +322,39 @@ export class GameScene extends Phaser.Scene {
     // Find the player who shot this laser
     const shooter = this.players.find((p) => p.playerId === laser.ownerId);
 
-    // Destroy the entire cluster
-    const { score } = this.blockSpawner.destroyCluster(block.clusterId);
+    // Damage the cluster (merged blocks share HP)
+    const clusterDestroyed = this.blockSpawner.damageCluster(block.clusterId);
 
-    // Award score to shooter
-    if (shooter) {
-      shooter.addScore(score);
-      this.showScorePopup(block.x, block.y, score);
+    if (clusterDestroyed) {
+      // Destroy entire cluster
+      const { score } = this.blockSpawner.destroyCluster(block.clusterId);
+
+      // Award points with combo bonus
+      if (shooter) {
+        shooter.addScore(score);
+        this.showScorePopup(block.x, block.y, score);
+      }
+    } else {
+      // Cluster took damage but isn't destroyed yet
+      // Show small hit indicator
+      this.showHitPopup(block.x, block.y);
     }
+  }
+
+  private showHitPopup(x: number, y: number): void {
+    const text = this.add.text(x, y - 10, '★', {
+      fontSize: '16px',
+      color: '#ffff00',
+    });
+    text.setOrigin(0.5);
+
+    this.tweens.add({
+      targets: text,
+      y: y - 30,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => text.destroy(),
+    });
   }
 
   private handlePlayerPowerUpCollision(player: Bamster, powerUp: PowerUp): void {
@@ -329,49 +427,91 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createUI(): void {
-    // Player 1 UI (top-left)
+    const panelX = PLAY_AREA_WIDTH + 20;
+    const panelCenterX = PLAY_AREA_WIDTH + (GAME_WIDTH - PLAY_AREA_WIDTH) / 2;
+
+    // Player 1 UI in side panel
+    this.add.text(panelCenterX, 80, 'PLAYER 1', {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: '#00ffff',
+    }).setOrigin(0.5);
+
     this.scoreTexts.push(
-      this.add.text(10, 10, 'P1 Score: 0', {
-        fontSize: '18px',
-        fontFamily: 'Arial',
-        color: '#ffffff',
+      this.add.text(panelX, 105, 'SCORE: 0', {
+        fontSize: '20px',
+        fontFamily: 'monospace',
+        color: '#ffff00',
       })
     );
     this.healthTexts.push(
-      this.add.text(10, 35, 'Health: 1', {
+      this.add.text(panelX, 135, 'HEALTH: 1', {
         fontSize: '16px',
-        fontFamily: 'Arial',
-        color: '#ff6666',
+        fontFamily: 'monospace',
+        color: '#ff4444',
       })
     );
 
-    // Player 2 UI (top-right) for local multiplayer
+    // Player 2 UI for local multiplayer
     if (this.mode === 'local') {
+      // Divider
+      const graphics = this.add.graphics();
+      graphics.lineStyle(1, COLORS.textNeon, 0.5);
+      graphics.lineBetween(PLAY_AREA_WIDTH + 20, 180, GAME_WIDTH - 20, 180);
+
+      this.add.text(panelCenterX, 200, 'PLAYER 2', {
+        fontSize: '14px',
+        fontFamily: 'monospace',
+        color: '#ff88ff',
+      }).setOrigin(0.5);
+
       this.scoreTexts.push(
-        this.add.text(GAME_WIDTH - 10, 10, 'P2 Score: 0', {
-          fontSize: '18px',
-          fontFamily: 'Arial',
-          color: '#aaaaff',
-        }).setOrigin(1, 0)
+        this.add.text(panelX, 225, 'SCORE: 0', {
+          fontSize: '20px',
+          fontFamily: 'monospace',
+          color: '#ffff00',
+        })
       );
       this.healthTexts.push(
-        this.add.text(GAME_WIDTH - 10, 35, 'Health: 1', {
+        this.add.text(panelX, 255, 'HEALTH: 1', {
           fontSize: '16px',
-          fontFamily: 'Arial',
-          color: '#ff6666',
-        }).setOrigin(1, 0)
+          fontFamily: 'monospace',
+          color: '#ff4444',
+        })
       );
     }
+
+    // Controls hint at bottom of panel
+    const controlsY = GAME_HEIGHT - 120;
+    this.add.text(panelCenterX, controlsY, 'CONTROLS', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#888888',
+    }).setOrigin(0.5);
+    this.add.text(panelCenterX, controlsY + 20, '← → MOVE', {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#666666',
+    }).setOrigin(0.5);
+    this.add.text(panelCenterX, controlsY + 35, '↑ / W JUMP', {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#666666',
+    }).setOrigin(0.5);
+    this.add.text(panelCenterX, controlsY + 50, 'SPACE SHOOT', {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#666666',
+    }).setOrigin(0.5);
   }
 
   private updateUI(): void {
     this.players.forEach((player, index) => {
       if (this.scoreTexts[index]) {
-        const prefix = this.mode === 'local' ? `P${index + 1} ` : '';
-        this.scoreTexts[index].setText(`${prefix}Score: ${player.score}`);
+        this.scoreTexts[index].setText(`SCORE: ${player.score}`);
       }
       if (this.healthTexts[index]) {
-        this.healthTexts[index].setText(`Health: ${player.health}`);
+        this.healthTexts[index].setText(`HEALTH: ${player.health}`);
       }
     });
   }
@@ -454,6 +594,12 @@ export class GameScene extends Phaser.Scene {
     // Update power-ups
     this.powerUpGroup.children.each((powerUp) => {
       (powerUp as PowerUp).update();
+      return true;
+    });
+
+    // Update blocks (for HP indicators)
+    this.blockGroup.children.each((block) => {
+      (block as Block).update();
       return true;
     });
 

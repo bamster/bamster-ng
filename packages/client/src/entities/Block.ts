@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BLOCK_SIZE, BLOCK_FALL_SPEED, GAME_HEIGHT } from '@bamster/shared';
+import { BLOCK_SIZE, BLOCK_FALL_SPEED, GAME_HEIGHT, BLOCK_HP, FRAME_WIDTH } from '@bamster/shared';
 import type { BlockColor } from '@bamster/shared';
 
 export class Block extends Phaser.Physics.Arcade.Sprite {
@@ -7,8 +7,11 @@ export class Block extends Phaser.Physics.Arcade.Sprite {
   public color: BlockColor;
   public clusterId: string;
   public isResting: boolean = false;
+  public hp: number;
+  public maxHp: number;
 
   private static idCounter = 0;
+  private hpText?: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene, x: number, y: number, color: BlockColor) {
     super(scene, x, y, `block_${color}`);
@@ -16,6 +19,10 @@ export class Block extends Phaser.Physics.Arcade.Sprite {
     this.blockId = `block_${Block.idCounter++}`;
     this.color = color;
     this.clusterId = this.blockId; // Initially its own cluster
+
+    // Set HP based on color
+    this.maxHp = BLOCK_HP[color] ?? 3;
+    this.hp = this.maxHp;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -29,6 +36,52 @@ export class Block extends Phaser.Physics.Arcade.Sprite {
 
     // Start falling
     this.setVelocityY(BLOCK_FALL_SPEED);
+
+    // Create HP indicator
+    this.createHpIndicator();
+  }
+
+  private createHpIndicator(): void {
+    this.hpText = this.scene.add.text(this.x, this.y, `${this.hp}`, {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 2,
+    });
+    this.hpText.setOrigin(0.5);
+    this.hpText.setDepth(10);
+  }
+
+  private updateHpIndicator(): void {
+    if (this.hpText) {
+      this.hpText.setPosition(this.x, this.y);
+      this.hpText.setText(`${this.hp}`);
+    }
+  }
+
+  takeDamage(): boolean {
+    this.hp -= 1;
+
+    // Flash effect
+    this.scene.tweens.add({
+      targets: this,
+      alpha: 0.5,
+      duration: 50,
+      yoyo: true,
+    });
+
+    this.updateHpIndicator();
+
+    if (this.hp <= 0) {
+      return true; // Block should be destroyed
+    }
+
+    // Darken the block as it takes damage
+    const damageRatio = this.hp / this.maxHp;
+    this.setAlpha(0.5 + damageRatio * 0.5);
+
+    return false; // Block still alive
   }
 
   setFallSpeed(speed: number): void {
@@ -48,9 +101,9 @@ export class Block extends Phaser.Physics.Arcade.Sprite {
     body.setAllowGravity(false);
     body.setVelocity(0, 0);
 
-    // Snap X to grid
-    const gridX = Math.floor(this.x / BLOCK_SIZE);
-    this.x = gridX * BLOCK_SIZE + BLOCK_SIZE / 2;
+    // Snap X to grid (accounting for frame offset)
+    const gridX = Math.floor((this.x - FRAME_WIDTH) / BLOCK_SIZE);
+    this.x = FRAME_WIDTH + gridX * BLOCK_SIZE + BLOCK_SIZE / 2;
 
     // Snap Y to the target position or calculate from current position
     if (targetY !== undefined) {
@@ -69,7 +122,17 @@ export class Block extends Phaser.Physics.Arcade.Sprite {
     this.clusterId = clusterId;
   }
 
+  update(): void {
+    // Keep HP indicator positioned on block
+    this.updateHpIndicator();
+  }
+
   destroyBlock(): void {
+    // Clean up HP text
+    if (this.hpText) {
+      this.hpText.destroy();
+    }
+
     // Visual effect
     this.scene.tweens.add({
       targets: this,

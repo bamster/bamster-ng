@@ -53,11 +53,11 @@ export class GameScene extends Phaser.Scene {
   private powerUpIndicators: Phaser.GameObjects.Container[] = [];
   private highScore: number = 0;
 
-  // Combo system (to be implemented - see BAM-28p)
-  private _comboCount: number = 0;
-  private _comboTimer?: Phaser.Time.TimerEvent;
-  private _comboText?: Phaser.GameObjects.Text;
-  private _comboTimeout: number = 2000; // Reset combo after 2 seconds
+  // Combo system
+  private comboCount: number = 0;
+  private comboTimer?: Phaser.Time.TimerEvent;
+  private comboText?: Phaser.GameObjects.Text;
+  private comboTimeout: number = 2000; // Reset combo after 2 seconds
 
   // Game state
   private isGameOver: boolean = false;
@@ -76,13 +76,6 @@ export class GameScene extends Phaser.Scene {
   private networkBlocks: Map<string, Phaser.GameObjects.Container> = new Map();
   private networkLasers: Map<string, Phaser.GameObjects.Sprite> = new Map();
   private networkPowerUps: Map<string, Phaser.GameObjects.Sprite> = new Map();
-
-  // Input prediction state for local player (to be implemented - see BAM-0li)
-  private _predictedX: number = 0;
-  private _predictedY: number = 0;
-  private _predictedVx: number = 0;
-  private _predictedVy: number = 0;
-  private _predictionInitialized: boolean = false;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -111,13 +104,6 @@ export class GameScene extends Phaser.Scene {
     this.networkBlocks = new Map();
     this.networkLasers = new Map();
     this.networkPowerUps = new Map();
-
-    // Reset prediction state
-    this._predictedX = 0;
-    this._predictedY = 0;
-    this._predictedVx = 0;
-    this._predictedVy = 0;
-    this._predictionInitialized = false;
 
     // Reset combo state
     this.comboCount = 0;
@@ -1087,8 +1073,7 @@ export class GameScene extends Phaser.Scene {
       // Hide combo for single hits
       this.comboText.setVisible(false);
     } else {
-      // Show combo counter with multiplier
-      const multiplier = 1 + (this.comboCount - 1) * 0.25;
+      // Show combo counter
       this.comboText.setText(`${this.comboCount}x COMBO!`);
       this.comboText.setVisible(true);
 
@@ -1388,25 +1373,72 @@ export class GameScene extends Phaser.Scene {
     // Clear existing indicators
     container.removeAll(true);
 
-    let xOffset = 0;
-    const spacing = 25;
+    let yOffset = 0;
+    const barWidth = 80;
+    const barHeight = 10;
+    const spacing = 28;
 
-    // Show active power-ups
-    if (player.jumpPower > 1) {
-      const sneakerIcon = this.add.text(xOffset, 0, '👟', { fontSize: '16px' });
-      container.add(sneakerIcon);
-      xOffset += spacing;
+    // Show sneakers power-up with timer
+    if (player.hasSneakers()) {
+      const remaining = player.getSneakersTimeRemaining();
+      this.createPowerUpBar(container, 0, yOffset, 'JUMP+', remaining, 0x88ffff, barWidth, barHeight);
+      yOffset += spacing;
     }
 
-    if (player.weaponType !== 'basic') {
-      const weaponIcons: Record<string, string> = {
-        rapid: '⚡',
-        spread: '🔥',
-        piercing: '💎',
+    // Show weapon power-up with timer
+    if (player.hasWeaponPowerUp()) {
+      const weaponLabels: Record<string, string> = {
+        rapid: 'RAPID',
+        spread: 'SPREAD',
+        piercing: 'PIERCE',
       };
-      const weaponIcon = this.add.text(xOffset, 0, weaponIcons[player.weaponType] || '🔫', { fontSize: '16px' });
-      container.add(weaponIcon);
-      xOffset += spacing;
+      const weaponColors: Record<string, number> = {
+        rapid: 0xff8888,
+        spread: 0x88ff88,
+        piercing: 0xaa88ff,
+      };
+      const remaining = player.getWeaponTimeRemaining();
+      const label = weaponLabels[player.weaponType] || 'WEAPON';
+      const color = weaponColors[player.weaponType] || 0xffffff;
+      this.createPowerUpBar(container, 0, yOffset, label, remaining, color, barWidth, barHeight);
+      yOffset += spacing;
+    }
+  }
+
+  private createPowerUpBar(
+    container: Phaser.GameObjects.Container,
+    x: number,
+    y: number,
+    label: string,
+    remainingFraction: number,
+    color: number,
+    width: number,
+    height: number
+  ): void {
+    // Label
+    const labelText = this.add.text(x, y, label, {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+    });
+    container.add(labelText);
+
+    // Timer bar background
+    const barY = y + 12;
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0x333333, 1);
+    barBg.fillRect(x, barY, width, height);
+    barBg.lineStyle(1, color, 0.5);
+    barBg.strokeRect(x, barY, width, height);
+    container.add(barBg);
+
+    // Timer bar fill
+    const fillWidth = Math.max(0, remainingFraction * (width - 2));
+    if (fillWidth > 0) {
+      const barFill = this.add.graphics();
+      barFill.fillStyle(color, 0.8);
+      barFill.fillRect(x + 1, barY + 1, fillWidth, height - 2);
+      container.add(barFill);
     }
   }
 

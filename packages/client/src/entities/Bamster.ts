@@ -155,6 +155,7 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     this.sneakersTimer = this.scene.time.delayedCall(POWERUP_DURATION, () => {
       this.jumpPower = 1;
       this.clearTint();
+      this.sneakersTimer = undefined;
     });
   }
 
@@ -177,7 +178,32 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     this.weaponTimer = this.scene.time.delayedCall(POWERUP_DURATION, () => {
       this.weaponType = 'basic';
       this.clearTint();
+      this.weaponTimer = undefined;
     });
+  }
+
+  /** Get remaining time for sneakers power-up (0-1 fraction, or 0 if not active) */
+  getSneakersTimeRemaining(): number {
+    if (!this.sneakersTimer) return 0;
+    const remaining = this.sneakersTimer.getRemaining();
+    return remaining / POWERUP_DURATION;
+  }
+
+  /** Get remaining time for weapon power-up (0-1 fraction, or 0 if not active) */
+  getWeaponTimeRemaining(): number {
+    if (!this.weaponTimer) return 0;
+    const remaining = this.weaponTimer.getRemaining();
+    return remaining / POWERUP_DURATION;
+  }
+
+  /** Check if sneakers power-up is active */
+  hasSneakers(): boolean {
+    return this.jumpPower > 1;
+  }
+
+  /** Check if weapon power-up is active */
+  hasWeaponPowerUp(): boolean {
+    return this.weaponType !== 'basic';
   }
 
   takeDamage(): boolean {

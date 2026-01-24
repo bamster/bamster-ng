@@ -102,6 +102,17 @@ export class GameScene extends Phaser.Scene {
   private predictedVy: number = 0;
   private predictionInitialized: boolean = false;
 
+  // Interpolation buffer for remote players (latency compensation)
+  private playerInterpolationBuffers: Map<string, Array<{
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    timestamp: number;
+  }>> = new Map();
+  private readonly INTERPOLATION_DELAY = 100; // ms - how far behind to render remote players
+  private readonly MAX_BUFFER_SIZE = 10; // max states to keep in buffer
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -136,6 +147,9 @@ export class GameScene extends Phaser.Scene {
     this.predictedVx = 0;
     this.predictedVy = 0;
     this.predictionInitialized = false;
+
+    // Reset interpolation buffers
+    this.playerInterpolationBuffers = new Map();
 
     // Reset combo state
     this.comboCount = 0;
@@ -874,9 +888,10 @@ export class GameScene extends Phaser.Scene {
       container.x = state.x;
       container.y = state.y;
     } else {
-      // Lerp towards server position for remote players
-      container.x = Phaser.Math.Linear(container.x, state.x, 0.3);
-      container.y = Phaser.Math.Linear(container.y, state.y, 0.3);
+      // Use interpolation buffer for remote players for smooth movement
+      const position = this.getInterpolatedPosition(state);
+      container.x = position.x;
+      container.y = position.y;
     }
 
     const sprite = container.getByName('sprite') as Phaser.GameObjects.Sprite;
@@ -889,6 +904,84 @@ export class GameScene extends Phaser.Scene {
         sprite.setTexture(state.facingRight ? 'bamster' : 'bamster_left');
       }
     }
+  }
+
+  private addToInterpolationBuffer(state: PlayerNetState): void {
+    const playerId = state.id;
+    if (!this.playerInterpolationBuffers.has(playerId)) {
+      this.playerInterpolationBuffers.set(playerId, []);
+    }
+
+    const buffer = this.playerInterpolationBuffers.get(playerId)!;
+    buffer.push({
+      x: state.x,
+      y: state.y,
+      vx: state.vx,
+      vy: state.vy,
+      timestamp: Date.now(),
+    });
+
+    // Keep buffer size limited
+    while (buffer.length > this.MAX_BUFFER_SIZE) {
+      buffer.shift();
+    }
+  }
+
+  private getInterpolatedPosition(state: PlayerNetState): { x: number; y: number } {
+    const playerId = state.id;
+
+    // Add current state to buffer
+    this.addToInterpolationBuffer(state);
+
+    const buffer = this.playerInterpolationBuffers.get(playerId);
+    if (!buffer || buffer.length < 2) {
+      // Not enough data, use current state
+      return { x: state.x, y: state.y };
+    }
+
+    // Calculate render time (current time minus interpolation delay)
+    const renderTime = Date.now() - this.INTERPOLATION_DELAY;
+
+    // Find two states to interpolate between
+    let beforeState = buffer[0];
+    let afterState = buffer[1];
+
+    for (let i = 0; i < buffer.length - 1; i++) {
+      if (buffer[i].timestamp <= renderTime && buffer[i + 1].timestamp >= renderTime) {
+        beforeState = buffer[i];
+        afterState = buffer[i + 1];
+        break;
+      }
+    }
+
+    // If render time is after all buffered states, extrapolate using velocity
+    if (renderTime > buffer[buffer.length - 1].timestamp) {
+      const lastState = buffer[buffer.length - 1];
+      const timeSinceLastUpdate = (renderTime - lastState.timestamp) / 1000;
+
+      // Limit extrapolation to avoid wild jumps
+      const maxExtrapolationTime = 0.1; // 100ms max extrapolation
+      const extrapolationTime = Math.min(timeSinceLastUpdate, maxExtrapolationTime);
+
+      return {
+        x: lastState.x + lastState.vx * extrapolationTime,
+        y: lastState.y + lastState.vy * extrapolationTime,
+      };
+    }
+
+    // Interpolate between states
+    const timeDiff = afterState.timestamp - beforeState.timestamp;
+    if (timeDiff === 0) {
+      return { x: state.x, y: state.y };
+    }
+
+    const t = (renderTime - beforeState.timestamp) / timeDiff;
+    const clampedT = Math.max(0, Math.min(1, t));
+
+    return {
+      x: Phaser.Math.Linear(beforeState.x, afterState.x, clampedT),
+      y: Phaser.Math.Linear(beforeState.y, afterState.y, clampedT),
+    };
   }
 
   private syncNetworkBlocks(): void {

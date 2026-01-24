@@ -7,6 +7,8 @@ import { Laser } from '../entities/Laser';
 import { PowerUp } from '../entities/PowerUp';
 import { BlockSpawner } from '../systems/BlockSpawner';
 import { InputManager } from '../systems/InputManager';
+// Network imports (for future online multiplayer feature)
+// import { NetworkManager, type NetworkState } from '../systems/NetworkManager';
 
 // 80s color palette
 const COLORS = {
@@ -48,6 +50,9 @@ export class GameScene extends Phaser.Scene {
   private isGameOver: boolean = false;
   private isPaused: boolean = false;
   private pauseOverlay?: Phaser.GameObjects.Container;
+
+  // Online multiplayer (to be implemented - see BAM-tp5 epic)
+  // Network properties will be added when implementing online mode
 
   constructor() {
     super({ key: 'GameScene' });
@@ -93,7 +98,14 @@ export class GameScene extends Phaser.Scene {
     // Create input manager
     this.inputManager = new InputManager(this);
 
-    // Create block spawner
+    // Online mode not yet implemented - see BAM-tp5 epic
+    if (this.mode === 'online') {
+      console.warn('Online mode not yet implemented');
+      this.scene.start('MenuScene');
+      return;
+    }
+
+    // Create block spawner (local modes only)
     this.blockSpawner = new BlockSpawner(
       this,
       this.blockGroup,
@@ -769,6 +781,25 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private checkBlocksReachedTop(): void {
+    // Game over if any resting block is at or above the top threshold
+    const topThreshold = FRAME_WIDTH + BLOCK_SIZE * 2; // Two block heights from top
+
+    const blocksAtTop = (this.blockGroup.children.getArray() as Block[]).filter(
+      (block) => block.isResting && block.y <= topThreshold
+    );
+
+    if (blocksAtTop.length > 0) {
+      // Kill all players - blocks have reached the top
+      this.players.forEach((player) => {
+        if (player.isAlive) {
+          player.die();
+        }
+      });
+      this.checkGameOver();
+    }
+  }
+
   update(): void {
     if (this.isGameOver || this.isPaused) return;
 
@@ -798,6 +829,9 @@ export class GameScene extends Phaser.Scene {
 
     // Check for crushed players
     this.checkCrushed();
+
+    // Check if blocks have reached the top (game over condition)
+    this.checkBlocksReachedTop();
 
     // Check if players fell off
     this.players.forEach((player) => {

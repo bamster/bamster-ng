@@ -60,13 +60,13 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   moveLeft(): void {
     this.setVelocityX(-BAMSTER_SPEED);
     this.facingRight = false;
-    this.setTexture('bamster_left');
+    // Sprite/animation is handled by updateSprite()
   }
 
   moveRight(): void {
     this.setVelocityX(BAMSTER_SPEED);
     this.facingRight = true;
-    this.setTexture('bamster');
+    // Sprite/animation is handled by updateSprite()
   }
 
   stopMoving(): void {

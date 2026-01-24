@@ -288,25 +288,45 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   }
 
   private updateSprite(velocityY: number, onGround: boolean): void {
-    let textureName: string;
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    const isMovingHorizontally = Math.abs(body.velocity.x) > 10;
 
     if (onGround) {
-      // On ground - use normal sprite
-      textureName = this.facingRight ? 'bamster' : 'bamster_left';
+      if (isMovingHorizontally) {
+        // Running - play run animation
+        const animKey = this.facingRight ? 'bamster_run' : 'bamster_left_run';
+        if (this.anims.currentAnim?.key !== animKey) {
+          this.play(animKey);
+        }
+      } else {
+        // Standing still - use idle sprite
+        this.stop();
+        const textureName = this.facingRight ? 'bamster' : 'bamster_left';
+        if (this.texture.key !== textureName) {
+          this.setTexture(textureName);
+        }
+      }
     } else if (velocityY < -50) {
       // Going up (jumping) - use jump sprite
-      textureName = this.facingRight ? 'bamster_jump' : 'bamster_left_jump';
+      this.stop();
+      const textureName = this.facingRight ? 'bamster_jump' : 'bamster_left_jump';
+      if (this.texture.key !== textureName) {
+        this.setTexture(textureName);
+      }
     } else if (velocityY > 50) {
       // Falling - use fall sprite
-      textureName = this.facingRight ? 'bamster_fall' : 'bamster_left_fall';
+      this.stop();
+      const textureName = this.facingRight ? 'bamster_fall' : 'bamster_left_fall';
+      if (this.texture.key !== textureName) {
+        this.setTexture(textureName);
+      }
     } else {
       // Near apex of jump - use normal sprite
-      textureName = this.facingRight ? 'bamster' : 'bamster_left';
-    }
-
-    // Only change if different to avoid unnecessary updates
-    if (this.texture.key !== textureName) {
-      this.setTexture(textureName);
+      this.stop();
+      const textureName = this.facingRight ? 'bamster' : 'bamster_left';
+      if (this.texture.key !== textureName) {
+        this.setTexture(textureName);
+      }
     }
   }
 }

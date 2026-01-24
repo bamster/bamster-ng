@@ -139,15 +139,19 @@ export class BootScene extends Phaser.Scene {
   private generateBamsterTexture(): void {
     // Generate right-facing frames (idle, running, jump, fall)
     this.generateBamsterFrame('bamster', false, 'idle');
+    this.generateBamsterFrame('bamster_run1', false, 'run1');
+    this.generateBamsterFrame('bamster_run2', false, 'run2');
     this.generateBamsterFrame('bamster_jump', false, 'jump');
     this.generateBamsterFrame('bamster_fall', false, 'fall');
     // Generate left-facing frames
     this.generateBamsterFrame('bamster_left', true, 'idle');
+    this.generateBamsterFrame('bamster_left_run1', true, 'run1');
+    this.generateBamsterFrame('bamster_left_run2', true, 'run2');
     this.generateBamsterFrame('bamster_left_jump', true, 'jump');
     this.generateBamsterFrame('bamster_left_fall', true, 'fall');
   }
 
-  private generateBamsterFrame(textureName: string, flipX: boolean, state: 'idle' | 'jump' | 'fall'): void {
+  private generateBamsterFrame(textureName: string, flipX: boolean, state: 'idle' | 'run1' | 'run2' | 'jump' | 'fall'): void {
     const graphics = this.make.graphics({ x: 0, y: 0 });
     const baseX = flipX ? 32 : 24;
     const spriteWidth = 56;
@@ -173,6 +177,19 @@ export class BootScene extends Phaser.Scene {
         baseX + capeDir * 6, 14,
         baseX + capeDir * 22, 36,
         baseX + capeDir * 8, 34
+      );
+    } else if (state === 'run1' || state === 'run2') {
+      // Cape flows back horizontally when running
+      graphics.fillTriangle(
+        baseX + capeDir * 6, 14,                    // neck attachment
+        baseX + capeDir * 38, 20,                   // streams back
+        baseX + capeDir * 32, 30                    // bottom edge
+      );
+      graphics.fillStyle(0xff3333, 1);
+      graphics.fillTriangle(
+        baseX + capeDir * 6, 14,
+        baseX + capeDir * 32, 18,
+        baseX + capeDir * 28, 26
       );
     } else if (state === 'jump') {
       // Cape streams horizontally/slightly up (jumping up)
@@ -250,8 +267,16 @@ export class BootScene extends Phaser.Scene {
       // Legs spread when falling
       graphics.fillEllipse(baseX - 10, 40, 6, 5);
       graphics.fillEllipse(baseX + 10, 40, 6, 5);
+    } else if (state === 'run1') {
+      // Running frame 1: left leg forward, right leg back
+      graphics.fillEllipse(baseX - 12, 38, 6, 5);  // left forward
+      graphics.fillEllipse(baseX + 4, 42, 6, 5);   // right back
+    } else if (state === 'run2') {
+      // Running frame 2: right leg forward, left leg back
+      graphics.fillEllipse(baseX - 4, 42, 6, 5);   // left back
+      graphics.fillEllipse(baseX + 12, 38, 6, 5);  // right forward
     } else {
-      // Normal standing legs
+      // Normal standing legs (idle)
       graphics.fillEllipse(baseX - 8, 40, 6, 6);
       graphics.fillEllipse(baseX + 8, 40, 6, 6);
     }
@@ -264,7 +289,14 @@ export class BootScene extends Phaser.Scene {
     } else if (state === 'fall') {
       graphics.fillEllipse(baseX - 10, 44, 5, 3);
       graphics.fillEllipse(baseX + 10, 44, 5, 3);
+    } else if (state === 'run1') {
+      graphics.fillEllipse(baseX - 12, 42, 5, 3);  // left forward
+      graphics.fillEllipse(baseX + 4, 46, 5, 3);   // right back
+    } else if (state === 'run2') {
+      graphics.fillEllipse(baseX - 4, 46, 5, 3);   // left back
+      graphics.fillEllipse(baseX + 12, 42, 5, 3);  // right forward
     } else {
+      // idle feet
       graphics.fillEllipse(baseX - 8, 44, 5, 3);
       graphics.fillEllipse(baseX + 8, 44, 5, 3);
     }
@@ -385,7 +417,26 @@ export class BootScene extends Phaser.Scene {
   }
 
   private createAnimations(): void {
-    // For now, we use static sprites
-    // When legacy assets are added, we'll create proper animations here
+    // Running animation - right facing
+    this.anims.create({
+      key: 'bamster_run',
+      frames: [
+        { key: 'bamster_run1' },
+        { key: 'bamster_run2' },
+      ],
+      frameRate: 10,
+      repeat: -1,
+    });
+
+    // Running animation - left facing
+    this.anims.create({
+      key: 'bamster_left_run',
+      frames: [
+        { key: 'bamster_left_run1' },
+        { key: 'bamster_left_run2' },
+      ],
+      frameRate: 10,
+      repeat: -1,
+    });
   }
 }

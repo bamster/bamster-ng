@@ -959,6 +959,11 @@ export class GameScene extends Phaser.Scene {
     if (died) {
       this.checkGameOver();
     }
+
+    // Destroy the block that hit the player
+    this.createBlockExplosion(block.x, block.y, block.color);
+    getSound().play('hit');
+    block.destroyBlock();
   }
 
   private handleBlockGroundCollision(block: Block): void {

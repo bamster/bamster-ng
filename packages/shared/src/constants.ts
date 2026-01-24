@@ -1,7 +1,7 @@
 // Game dimensions
 export const GAME_WIDTH = 800;
 export const GAME_HEIGHT = 600;
-export const PLAY_AREA_WIDTH = 560; // Narrower play area, rest is for UI
+export const PLAY_AREA_WIDTH = 568; // 14 blocks * 40px + 8px frame (4px each side)
 export const FRAME_WIDTH = 4;
 
 // Physics

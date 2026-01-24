@@ -42,6 +42,7 @@ export class GameScene extends Phaser.Scene {
   // UI
   private scoreTexts: Phaser.GameObjects.Text[] = [];
   private healthTexts: Phaser.GameObjects.Text[] = [];
+  private highScore: number = 0;
 
   // Game state
   private isGameOver: boolean = false;
@@ -59,6 +60,9 @@ export class GameScene extends Phaser.Scene {
     this.players = [];
     this.scoreTexts = [];
     this.healthTexts = [];
+    // Load high score from localStorage
+    const savedHighScore = localStorage.getItem('bamster_highscore');
+    this.highScore = savedHighScore ? parseInt(savedHighScore, 10) : 0;
   }
 
   create(): void {
@@ -587,22 +591,35 @@ export class GameScene extends Phaser.Scene {
     const panelX = PLAY_AREA_WIDTH + 20;
     const panelCenterX = PLAY_AREA_WIDTH + (GAME_WIDTH - PLAY_AREA_WIDTH) / 2;
 
+    // High score display
+    this.add.text(panelCenterX, 70, 'HIGH SCORE', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#888888',
+    }).setOrigin(0.5);
+
+    this.add.text(panelCenterX, 90, this.highScore.toString(), {
+      fontSize: '24px',
+      fontFamily: 'monospace',
+      color: '#ffff00',
+    }).setOrigin(0.5);
+
     // Player 1 UI in side panel
-    this.add.text(panelCenterX, 80, 'PLAYER 1', {
+    this.add.text(panelCenterX, 130, 'PLAYER 1', {
       fontSize: '14px',
       fontFamily: 'monospace',
       color: '#00ffff',
     }).setOrigin(0.5);
 
     this.scoreTexts.push(
-      this.add.text(panelX, 105, 'SCORE: 0', {
+      this.add.text(panelX, 155, 'SCORE: 0', {
         fontSize: '20px',
         fontFamily: 'monospace',
         color: '#ffff00',
       })
     );
     this.healthTexts.push(
-      this.add.text(panelX, 135, 'HEALTH: 1', {
+      this.add.text(panelX, 185, 'HEALTH: 1', {
         fontSize: '16px',
         fontFamily: 'monospace',
         color: '#ff4444',
@@ -614,23 +631,23 @@ export class GameScene extends Phaser.Scene {
       // Divider
       const graphics = this.add.graphics();
       graphics.lineStyle(1, COLORS.textNeon, 0.5);
-      graphics.lineBetween(PLAY_AREA_WIDTH + 20, 180, GAME_WIDTH - 20, 180);
+      graphics.lineBetween(PLAY_AREA_WIDTH + 20, 230, GAME_WIDTH - 20, 230);
 
-      this.add.text(panelCenterX, 200, 'PLAYER 2', {
+      this.add.text(panelCenterX, 250, 'PLAYER 2', {
         fontSize: '14px',
         fontFamily: 'monospace',
         color: '#ff88ff',
       }).setOrigin(0.5);
 
       this.scoreTexts.push(
-        this.add.text(panelX, 225, 'SCORE: 0', {
+        this.add.text(panelX, 275, 'SCORE: 0', {
           fontSize: '20px',
           fontFamily: 'monospace',
           color: '#ffff00',
         })
       );
       this.healthTexts.push(
-        this.add.text(panelX, 255, 'HEALTH: 1', {
+        this.add.text(panelX, 305, 'HEALTH: 1', {
           fontSize: '16px',
           fontFamily: 'monospace',
           color: '#ff4444',
@@ -696,6 +713,13 @@ export class GameScene extends Phaser.Scene {
       score: p.score,
       isAlive: p.isAlive,
     }));
+
+    // Check for new high score (use highest score from all players)
+    const maxScore = Math.max(...scores.map((s) => s.score));
+    if (maxScore > this.highScore) {
+      this.highScore = maxScore;
+      localStorage.setItem('bamster_highscore', this.highScore.toString());
+    }
 
     this.scene.start('GameOverScene', {
       mode: this.mode,

@@ -81,6 +81,9 @@ export class BootScene extends Phaser.Scene {
 
     // Generate particle texture for effects
     this.generateParticleTexture();
+
+    // Generate heart textures for health display
+    this.generateHeartTexture();
   }
 
   create(): void {
@@ -137,32 +140,48 @@ export class BootScene extends Phaser.Scene {
   }
 
   private generateBamsterTexture(): void {
-    // Generate right-facing frames (idle, running, jump, fall)
-    this.generateBamsterFrame('bamster', false, 'idle');
-    this.generateBamsterFrame('bamster_run1', false, 'run1');
-    this.generateBamsterFrame('bamster_run2', false, 'run2');
-    this.generateBamsterFrame('bamster_jump', false, 'jump');
-    this.generateBamsterFrame('bamster_fall', false, 'fall');
-    // Generate left-facing frames
-    this.generateBamsterFrame('bamster_left', true, 'idle');
-    this.generateBamsterFrame('bamster_left_run1', true, 'run1');
-    this.generateBamsterFrame('bamster_left_run2', true, 'run2');
-    this.generateBamsterFrame('bamster_left_jump', true, 'jump');
-    this.generateBamsterFrame('bamster_left_fall', true, 'fall');
+    // Generate player 1 frames (red cape)
+    this.generateBamsterFrame('bamster', false, 'idle', 'red');
+    this.generateBamsterFrame('bamster_run1', false, 'run1', 'red');
+    this.generateBamsterFrame('bamster_run2', false, 'run2', 'red');
+    this.generateBamsterFrame('bamster_jump', false, 'jump', 'red');
+    this.generateBamsterFrame('bamster_fall', false, 'fall', 'red');
+    this.generateBamsterFrame('bamster_left', true, 'idle', 'red');
+    this.generateBamsterFrame('bamster_left_run1', true, 'run1', 'red');
+    this.generateBamsterFrame('bamster_left_run2', true, 'run2', 'red');
+    this.generateBamsterFrame('bamster_left_jump', true, 'jump', 'red');
+    this.generateBamsterFrame('bamster_left_fall', true, 'fall', 'red');
+
+    // Generate player 2 frames (blue cape)
+    this.generateBamsterFrame('bamster_p2', false, 'idle', 'blue');
+    this.generateBamsterFrame('bamster_p2_run1', false, 'run1', 'blue');
+    this.generateBamsterFrame('bamster_p2_run2', false, 'run2', 'blue');
+    this.generateBamsterFrame('bamster_p2_jump', false, 'jump', 'blue');
+    this.generateBamsterFrame('bamster_p2_fall', false, 'fall', 'blue');
+    this.generateBamsterFrame('bamster_p2_left', true, 'idle', 'blue');
+    this.generateBamsterFrame('bamster_p2_left_run1', true, 'run1', 'blue');
+    this.generateBamsterFrame('bamster_p2_left_run2', true, 'run2', 'blue');
+    this.generateBamsterFrame('bamster_p2_left_jump', true, 'jump', 'blue');
+    this.generateBamsterFrame('bamster_p2_left_fall', true, 'fall', 'blue');
   }
 
-  private generateBamsterFrame(textureName: string, flipX: boolean, state: 'idle' | 'run1' | 'run2' | 'jump' | 'fall'): void {
+  private generateBamsterFrame(textureName: string, flipX: boolean, state: 'idle' | 'run1' | 'run2' | 'jump' | 'fall', capeColor: 'red' | 'blue' = 'red'): void {
     const graphics = this.make.graphics({ x: 0, y: 0 });
     const baseX = flipX ? 32 : 24;
     const spriteWidth = 56;
     const spriteHeight = 52;
+
+    // Cape colors based on player
+    const capeColors = capeColor === 'red'
+      ? { dark: 0xcc0000, light: 0xff3333 }
+      : { dark: 0x0066cc, light: 0x3399ff };
 
     // Cape direction based on state
     // idle: cape hangs down, jump: cape streams up (going up fast), fall: cape streams up dramatically
     const capeDir = flipX ? 1 : -1;
 
     // Draw cape first (behind body)
-    graphics.fillStyle(0xcc0000, 1); // Dark red base
+    graphics.fillStyle(capeColors.dark, 1);
 
     if (state === 'idle') {
       // Cape hangs down with slight wave
@@ -172,7 +191,7 @@ export class BootScene extends Phaser.Scene {
         baseX + capeDir * 8, 40                     // bottom near body
       );
       // Brighter highlight layer
-      graphics.fillStyle(0xff3333, 1);
+      graphics.fillStyle(capeColors.light, 1);
       graphics.fillTriangle(
         baseX + capeDir * 6, 14,
         baseX + capeDir * 22, 36,
@@ -185,7 +204,7 @@ export class BootScene extends Phaser.Scene {
         baseX + capeDir * 38, 20,                   // streams back
         baseX + capeDir * 32, 30                    // bottom edge
       );
-      graphics.fillStyle(0xff3333, 1);
+      graphics.fillStyle(capeColors.light, 1);
       graphics.fillTriangle(
         baseX + capeDir * 6, 14,
         baseX + capeDir * 32, 18,
@@ -198,7 +217,7 @@ export class BootScene extends Phaser.Scene {
         baseX + capeDir * 40, 18,                   // streams out flat
         baseX + capeDir * 35, 28                    // bottom edge
       );
-      graphics.fillStyle(0xff3333, 1);
+      graphics.fillStyle(capeColors.light, 1);
       graphics.fillTriangle(
         baseX + capeDir * 6, 14,
         baseX + capeDir * 35, 16,
@@ -211,7 +230,7 @@ export class BootScene extends Phaser.Scene {
         baseX + capeDir * 35, -8,                   // streams up above head
         baseX + capeDir * 28, 8                     // mid point
       );
-      graphics.fillStyle(0xff3333, 1);
+      graphics.fillStyle(capeColors.light, 1);
       graphics.fillTriangle(
         baseX + capeDir * 6, 14,
         baseX + capeDir * 30, -4,
@@ -416,8 +435,61 @@ export class BootScene extends Phaser.Scene {
     graphics.destroy();
   }
 
+  private generateHeartTexture(): void {
+    const graphics = this.make.graphics({ x: 0, y: 0 });
+    const size = 20;
+    const centerX = size / 2;
+    const centerY = size / 2;
+
+    // Draw filled heart shape
+    graphics.fillStyle(0xff0066, 1);
+
+    // Heart is made of two circles and a triangle
+    const circleRadius = size * 0.25;
+    const circleY = centerY - size * 0.1;
+
+    // Left circle
+    graphics.fillCircle(centerX - circleRadius * 0.8, circleY, circleRadius);
+    // Right circle
+    graphics.fillCircle(centerX + circleRadius * 0.8, circleY, circleRadius);
+    // Bottom triangle
+    graphics.fillTriangle(
+      centerX - size * 0.45, circleY,
+      centerX + size * 0.45, circleY,
+      centerX, centerY + size * 0.4
+    );
+
+    // Add highlight/glow
+    graphics.fillStyle(0xff4488, 1);
+    graphics.fillCircle(centerX - circleRadius * 0.5, circleY - circleRadius * 0.3, circleRadius * 0.4);
+
+    graphics.generateTexture('heart', size, size);
+    graphics.destroy();
+
+    // Empty heart (outline only)
+    const emptyGraphics = this.make.graphics({ x: 0, y: 0 });
+    emptyGraphics.lineStyle(2, 0x660033, 1);
+
+    // Draw heart outline
+    emptyGraphics.strokeCircle(centerX - circleRadius * 0.8, circleY, circleRadius);
+    emptyGraphics.strokeCircle(centerX + circleRadius * 0.8, circleY, circleRadius);
+
+    // Fill with dark color
+    emptyGraphics.fillStyle(0x220011, 0.5);
+    emptyGraphics.fillCircle(centerX - circleRadius * 0.8, circleY, circleRadius);
+    emptyGraphics.fillCircle(centerX + circleRadius * 0.8, circleY, circleRadius);
+    emptyGraphics.fillTriangle(
+      centerX - size * 0.45, circleY,
+      centerX + size * 0.45, circleY,
+      centerX, centerY + size * 0.4
+    );
+
+    emptyGraphics.generateTexture('heart_empty', size, size);
+    emptyGraphics.destroy();
+  }
+
   private createAnimations(): void {
-    // Running animation - right facing
+    // Player 1 running animation - right facing
     this.anims.create({
       key: 'bamster_run',
       frames: [
@@ -428,12 +500,34 @@ export class BootScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    // Running animation - left facing
+    // Player 1 running animation - left facing
     this.anims.create({
       key: 'bamster_left_run',
       frames: [
         { key: 'bamster_left_run1' },
         { key: 'bamster_left_run2' },
+      ],
+      frameRate: 10,
+      repeat: -1,
+    });
+
+    // Player 2 running animation - right facing (blue cape)
+    this.anims.create({
+      key: 'bamster_p2_run',
+      frames: [
+        { key: 'bamster_p2_run1' },
+        { key: 'bamster_p2_run2' },
+      ],
+      frameRate: 10,
+      repeat: -1,
+    });
+
+    // Player 2 running animation - left facing (blue cape)
+    this.anims.create({
+      key: 'bamster_p2_left_run',
+      frames: [
+        { key: 'bamster_p2_left_run1' },
+        { key: 'bamster_p2_left_run2' },
       ],
       frameRate: 10,
       repeat: -1,

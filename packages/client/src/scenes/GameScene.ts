@@ -1525,16 +1525,12 @@ export class GameScene extends Phaser.Scene {
       })
     );
 
-    // Health bar for Player 1
-    this.add.text(panelX, 185, 'HP', {
-      fontSize: '12px',
-      fontFamily: 'monospace',
-      color: '#ff4444',
-    });
-    const healthBar1 = this.add.graphics();
-    this.healthBars.push(healthBar1);
+    // Heart icons for Player 1
+    const heartContainer1 = this.add.container(panelX, 185);
+    this.createHeartDisplay(heartContainer1);
+    this.heartContainers.push(heartContainer1);
     this.healthTexts.push(
-      this.add.text(panelX + 100, 185, '3', {
+      this.add.text(panelX + 120, 185, '', {
         fontSize: '12px',
         fontFamily: 'monospace',
         color: '#ff4444',

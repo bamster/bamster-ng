@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { LASER_SPEED } from '@bamster/shared';
+import { LASER_SPEED, PLAY_AREA_WIDTH, FRAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
 
 export class Laser extends Phaser.Physics.Arcade.Sprite {
   public laserId: string;
@@ -60,13 +60,13 @@ export class Laser extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(): void {
-    // Destroy if off screen
-    if (
-      this.x < -50 ||
-      this.x > this.scene.scale.width + 50 ||
-      this.y < -50 ||
-      this.y > this.scene.scale.height + 50
-    ) {
+    // Destroy if outside game frame (not just browser window)
+    const minX = FRAME_WIDTH;
+    const maxX = FRAME_WIDTH + PLAY_AREA_WIDTH;
+    const minY = FRAME_WIDTH;
+    const maxY = GAME_HEIGHT - FRAME_WIDTH;
+
+    if (this.x < minX || this.x > maxX || this.y < minY || this.y > maxY) {
       this.destroy();
     }
   }

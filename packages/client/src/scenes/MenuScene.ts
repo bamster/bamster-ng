@@ -67,7 +67,7 @@ export class MenuScene extends Phaser.Scene {
     titleGlow.setBlendMode(Phaser.BlendModes.ADD);
 
     // Subtitle
-    const subtitle = this.add.text(GAME_WIDTH / 2, 150, '★ HAMSTER VS BLOCKS ★', {
+    const subtitle = this.add.text(GAME_WIDTH / 2, 150, "★ It's BAMster time! ★", {
       fontSize: '20px',
       fontFamily: 'monospace',
       color: '#00ffff',

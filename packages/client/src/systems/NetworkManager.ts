@@ -125,6 +125,31 @@ export class NetworkManager {
     return this.joinOrCreate('quickmatch');
   }
 
+  async createPrivateRoom(): Promise<string> {
+    try {
+      // Create a new room with a unique name for private matches
+      this.room = await this.client.create('private');
+      this.localPlayerId = this.room.sessionId;
+
+      this.setupRoomListeners();
+
+      if (this.onConnected) {
+        this.onConnected(this.localPlayerId);
+      }
+
+      return this.localPlayerId;
+    } catch (error) {
+      if (this.onError) {
+        this.onError(error as Error);
+      }
+      throw error;
+    }
+  }
+
+  async joinPrivateRoom(roomId: string): Promise<string> {
+    return this.joinById(roomId);
+  }
+
   private setupRoomListeners(): void {
     if (!this.room) return;
 

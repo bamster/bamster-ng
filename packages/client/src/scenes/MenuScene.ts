@@ -89,14 +89,10 @@ export class MenuScene extends Phaser.Scene {
     });
 
     this.createButton(GAME_WIDTH / 2, 470, '► ONLINE PLAY', () => {
-      this.startGame('online');
+      this.scene.start('LobbyScene');
     });
 
-    this.createButton(GAME_WIDTH / 2, 530, '? HOW TO PLAY', () => {
-      this.scene.start('TutorialScene');
-    });
-
-    this.createButton(GAME_WIDTH / 2, 590, '⚙ SETTINGS', () => {
+    this.createButton(GAME_WIDTH / 2, 530, '⚙ SETTINGS', () => {
       this.scene.start('SettingsScene');
     });
 

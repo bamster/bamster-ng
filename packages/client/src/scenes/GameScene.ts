@@ -39,6 +39,8 @@ const COLORS = {
 
 interface GameSceneData {
   mode: GameMode;
+  networkManager?: NetworkManager;
+  localPlayerId?: string;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -116,9 +118,9 @@ export class GameScene extends Phaser.Scene {
     const savedHighScore = localStorage.getItem('bamster_highscore');
     this.highScore = savedHighScore ? parseInt(savedHighScore, 10) : 0;
 
-    // Reset network state
-    this.networkManager = undefined;
-    this.localPlayerId = undefined;
+    // Reset network state (or use provided from LobbyScene)
+    this.networkManager = data.networkManager;
+    this.localPlayerId = data.localPlayerId;
     this.networkState = undefined;
     this.isWaitingForPlayers = false;
     this.connectionOverlay = undefined;
@@ -524,9 +526,24 @@ export class GameScene extends Phaser.Scene {
   // ============================================
 
   private setupOnlineMode(): void {
-    this.showConnectionOverlay('CONNECTING...');
+    // Setup pause/quit key for online mode
+    this.input.keyboard?.on('keydown-ESC', () => {
+      if (!this.isGameOver) {
+        this.networkManager?.disconnect();
+        this.scene.start('MenuScene');
+      }
+    });
 
-    // Create network manager and connect
+    // If we already have a networkManager from LobbyScene, use it
+    if (this.networkManager && this.localPlayerId) {
+      // Game is already connected, set up listeners and start immediately
+      this.setupNetworkListeners();
+      this.createOnlineUI();
+      return;
+    }
+
+    // Fallback: create new connection (legacy path, not from lobby)
+    this.showConnectionOverlay('CONNECTING...');
     this.networkManager = new NetworkManager();
 
     this.networkManager.setOnConnected((playerId) => {
@@ -575,13 +592,31 @@ export class GameScene extends Phaser.Scene {
     this.networkManager.quickMatch().catch((error) => {
       console.error('Failed to connect:', error);
     });
+  }
 
-    // Setup pause/quit key for online mode
-    this.input.keyboard?.on('keydown-ESC', () => {
-      if (!this.isGameOver) {
-        this.networkManager?.disconnect();
-        this.scene.start('MenuScene');
+  private setupNetworkListeners(): void {
+    if (!this.networkManager) return;
+
+    this.networkManager.setOnStateChange((state) => {
+      this.networkState = state;
+
+      // Check for game over
+      if (state.isGameOver && !this.isGameOver) {
+        this.handleOnlineGameOver(state.winnerId);
       }
+    });
+
+    this.networkManager.setOnDisconnected(() => {
+      if (!this.isGameOver) {
+        this.showConnectionOverlay('DISCONNECTED');
+        this.time.delayedCall(2000, () => {
+          this.scene.start('MenuScene');
+        });
+      }
+    });
+
+    this.networkManager.setOnError((error) => {
+      console.error('Network error:', error);
     });
   }
 

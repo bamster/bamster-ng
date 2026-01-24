@@ -12,6 +12,7 @@ export class Block extends Phaser.Physics.Arcade.Sprite {
 
   private static idCounter = 0;
   private hpText?: Phaser.GameObjects.Text;
+  private targetFallSpeed: number = BLOCK_FALL_SPEED;
 
   constructor(scene: Phaser.Scene, x: number, y: number, color: BlockColor) {
     super(scene, x, y, `block_${color}`);
@@ -85,6 +86,7 @@ export class Block extends Phaser.Physics.Arcade.Sprite {
   }
 
   setFallSpeed(speed: number): void {
+    this.targetFallSpeed = speed;
     if (!this.isResting) {
       this.setVelocityY(speed);
     }
@@ -125,6 +127,14 @@ export class Block extends Phaser.Physics.Arcade.Sprite {
   update(): void {
     // Keep HP indicator positioned on block
     this.updateHpIndicator();
+
+    // Maintain fall speed for falling blocks (physics collisions can slow them down)
+    if (!this.isResting) {
+      const body = this.body as Phaser.Physics.Arcade.Body;
+      if (body.velocity.y !== this.targetFallSpeed) {
+        body.velocity.y = this.targetFallSpeed;
+      }
+    }
   }
 
   destroyBlock(): void {

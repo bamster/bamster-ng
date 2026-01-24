@@ -990,6 +990,9 @@ export class GameScene extends Phaser.Scene {
       // Destroy entire cluster
       const { score } = this.blockSpawner.destroyCluster(block.clusterId);
 
+      // Emit particle effect for block destruction
+      this.createBlockExplosion(block.x, block.y, block.color);
+
       // Award points with combo bonus
       if (shooter) {
         shooter.addScore(score);
@@ -1015,6 +1018,36 @@ export class GameScene extends Phaser.Scene {
       alpha: 0,
       duration: 300,
       onComplete: () => text.destroy(),
+    });
+  }
+
+  private createBlockExplosion(x: number, y: number, color: string): void {
+    // Color map for particles matching block colors
+    const colorMap: Record<string, number> = {
+      magenta: 0xff00ff,
+      cyan: 0x00ffff,
+      lime: 0x39ff14,
+      orange: 0xff6600,
+      violet: 0xbf00ff,
+    };
+    const tint = colorMap[color] ?? 0xffffff;
+
+    // Create particle emitter for this explosion
+    const particles = this.add.particles(x, y, 'particle', {
+      lifespan: 500,
+      speed: { min: 80, max: 200 },
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 1, end: 0 },
+      gravityY: 400,
+      tint: tint,
+      emitting: false,
+    });
+    particles.setDepth(50);
+    particles.explode(12);
+
+    // Clean up after particles finish
+    this.time.delayedCall(600, () => {
+      particles.destroy();
     });
   }
 

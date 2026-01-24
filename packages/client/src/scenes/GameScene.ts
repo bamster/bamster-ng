@@ -1070,6 +1070,9 @@ export class GameScene extends Phaser.Scene {
         break;
     }
 
+    // Play power-up sound
+    getSound().play('powerup');
+
     // Show pickup text
     this.showPowerUpText(powerUp.x, powerUp.y, powerUp.powerUpType);
 

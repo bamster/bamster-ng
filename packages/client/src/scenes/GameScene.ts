@@ -49,7 +49,15 @@ export class GameScene extends Phaser.Scene {
   // UI
   private scoreTexts: Phaser.GameObjects.Text[] = [];
   private healthTexts: Phaser.GameObjects.Text[] = [];
+  private healthBars: Phaser.GameObjects.Graphics[] = [];
+  private powerUpIndicators: Phaser.GameObjects.Container[] = [];
   private highScore: number = 0;
+
+  // Combo system (to be implemented - see BAM-28p)
+  private _comboCount: number = 0;
+  private _comboTimer?: Phaser.Time.TimerEvent;
+  private _comboText?: Phaser.GameObjects.Text;
+  private _comboTimeout: number = 2000; // Reset combo after 2 seconds
 
   // Game state
   private isGameOver: boolean = false;
@@ -69,6 +77,13 @@ export class GameScene extends Phaser.Scene {
   private networkLasers: Map<string, Phaser.GameObjects.Sprite> = new Map();
   private networkPowerUps: Map<string, Phaser.GameObjects.Sprite> = new Map();
 
+  // Input prediction state for local player (to be implemented - see BAM-0li)
+  private _predictedX: number = 0;
+  private _predictedY: number = 0;
+  private _predictedVx: number = 0;
+  private _predictedVy: number = 0;
+  private _predictionInitialized: boolean = false;
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -80,6 +95,8 @@ export class GameScene extends Phaser.Scene {
     this.players = [];
     this.scoreTexts = [];
     this.healthTexts = [];
+    this.healthBars = [];
+    this.powerUpIndicators = [];
     // Load high score from localStorage
     const savedHighScore = localStorage.getItem('bamster_highscore');
     this.highScore = savedHighScore ? parseInt(savedHighScore, 10) : 0;
@@ -94,6 +111,18 @@ export class GameScene extends Phaser.Scene {
     this.networkBlocks = new Map();
     this.networkLasers = new Map();
     this.networkPowerUps = new Map();
+
+    // Reset prediction state
+    this._predictedX = 0;
+    this._predictedY = 0;
+    this._predictedVx = 0;
+    this._predictedVy = 0;
+    this._predictionInitialized = false;
+
+    // Reset combo state
+    this.comboCount = 0;
+    this.comboTimer = undefined;
+    this.comboText = undefined;
   }
 
   create(): void {
@@ -995,10 +1024,15 @@ export class GameScene extends Phaser.Scene {
       // Emit particle effect for block destruction
       this.createBlockExplosion(block.x, block.y, block.color);
 
+      // Increment combo and apply multiplier
+      this.incrementCombo();
+      const comboMultiplier = 1 + (this.comboCount - 1) * 0.25; // 1x, 1.25x, 1.5x, 1.75x, 2x...
+      const finalScore = Math.floor(score * comboMultiplier);
+
       // Award points with combo bonus
       if (shooter) {
-        shooter.addScore(score);
-        this.showScorePopup(block.x, block.y, score);
+        shooter.addScore(finalScore);
+        this.showScorePopup(block.x, block.y, finalScore);
       }
     } else {
       // Cluster took damage but isn't destroyed yet
@@ -1022,6 +1056,61 @@ export class GameScene extends Phaser.Scene {
       duration: 300,
       onComplete: () => text.destroy(),
     });
+  }
+
+  private incrementCombo(): void {
+    this.comboCount++;
+
+    // Reset combo timer
+    if (this.comboTimer) {
+      this.comboTimer.destroy();
+    }
+    this.comboTimer = this.time.delayedCall(this.comboTimeout, () => {
+      this.resetCombo();
+    });
+
+    // Update combo display
+    this.updateComboDisplay();
+  }
+
+  private resetCombo(): void {
+    if (this.comboCount > 0) {
+      this.comboCount = 0;
+      this.updateComboDisplay();
+    }
+  }
+
+  private updateComboDisplay(): void {
+    if (!this.comboText) return;
+
+    if (this.comboCount <= 1) {
+      // Hide combo for single hits
+      this.comboText.setVisible(false);
+    } else {
+      // Show combo counter with multiplier
+      const multiplier = 1 + (this.comboCount - 1) * 0.25;
+      this.comboText.setText(`${this.comboCount}x COMBO!`);
+      this.comboText.setVisible(true);
+
+      // Color based on combo level
+      if (this.comboCount >= 10) {
+        this.comboText.setColor('#ff0000'); // Red for 10+
+      } else if (this.comboCount >= 5) {
+        this.comboText.setColor('#ffff00'); // Yellow for 5+
+      } else {
+        this.comboText.setColor('#ff00ff'); // Pink for 2-4
+      }
+
+      // Pulse animation
+      this.tweens.add({
+        targets: this.comboText,
+        scaleX: 1.3,
+        scaleY: 1.3,
+        duration: 100,
+        yoyo: true,
+        ease: 'Quad.easeOut',
+      });
+    }
   }
 
   private createBlockExplosion(x: number, y: number, color: string): void {
@@ -1143,6 +1232,15 @@ export class GameScene extends Phaser.Scene {
       color: '#ffff00',
     }).setOrigin(0.5);
 
+    // Combo counter (starts hidden)
+    this.comboText = this.add.text(panelCenterX, 115, '', {
+      fontSize: '16px',
+      fontFamily: 'monospace',
+      color: '#ff00ff',
+    });
+    this.comboText.setOrigin(0.5);
+    this.comboText.setVisible(false);
+
     // Player 1 UI in side panel
     this.add.text(panelCenterX, 130, 'PLAYER 1', {
       fontSize: '14px',
@@ -1157,41 +1255,67 @@ export class GameScene extends Phaser.Scene {
         color: '#ffff00',
       })
     );
+
+    // Health bar for Player 1
+    this.add.text(panelX, 185, 'HP', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#ff4444',
+    });
+    const healthBar1 = this.add.graphics();
+    this.healthBars.push(healthBar1);
     this.healthTexts.push(
-      this.add.text(panelX, 185, 'HEALTH: 1', {
-        fontSize: '16px',
+      this.add.text(panelX + 100, 185, '3', {
+        fontSize: '12px',
         fontFamily: 'monospace',
         color: '#ff4444',
       })
     );
+
+    // Power-up indicators for Player 1
+    const powerUpContainer1 = this.add.container(panelX, 210);
+    this.powerUpIndicators.push(powerUpContainer1);
 
     // Player 2 UI for local multiplayer
     if (this.mode === 'local') {
       // Divider
       const graphics = this.add.graphics();
       graphics.lineStyle(1, COLORS.textNeon, 0.5);
-      graphics.lineBetween(PLAY_AREA_WIDTH + 20, 230, GAME_WIDTH - 20, 230);
+      graphics.lineBetween(PLAY_AREA_WIDTH + 20, 250, GAME_WIDTH - 20, 250);
 
-      this.add.text(panelCenterX, 250, 'PLAYER 2', {
+      this.add.text(panelCenterX, 270, 'PLAYER 2', {
         fontSize: '14px',
         fontFamily: 'monospace',
         color: '#ff88ff',
       }).setOrigin(0.5);
 
       this.scoreTexts.push(
-        this.add.text(panelX, 275, 'SCORE: 0', {
+        this.add.text(panelX, 295, 'SCORE: 0', {
           fontSize: '20px',
           fontFamily: 'monospace',
           color: '#ffff00',
         })
       );
+
+      // Health bar for Player 2
+      this.add.text(panelX, 325, 'HP', {
+        fontSize: '12px',
+        fontFamily: 'monospace',
+        color: '#ff4444',
+      });
+      const healthBar2 = this.add.graphics();
+      this.healthBars.push(healthBar2);
       this.healthTexts.push(
-        this.add.text(panelX, 305, 'HEALTH: 1', {
-          fontSize: '16px',
+        this.add.text(panelX + 100, 325, '3', {
+          fontSize: '12px',
           fontFamily: 'monospace',
           color: '#ff4444',
         })
       );
+
+      // Power-up indicators for Player 2
+      const powerUpContainer2 = this.add.container(panelX, 350);
+      this.powerUpIndicators.push(powerUpContainer2);
     }
 
     // Controls hint at bottom of panel
@@ -1219,14 +1343,71 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateUI(): void {
+    const panelX = PLAY_AREA_WIDTH + 20;
+    const barWidth = 80;
+    const barHeight = 12;
+
     this.players.forEach((player, index) => {
       if (this.scoreTexts[index]) {
         this.scoreTexts[index].setText(`SCORE: ${player.score}`);
       }
+
+      // Update health bar
+      if (this.healthBars[index]) {
+        const healthBar = this.healthBars[index];
+        const barY = index === 0 ? 185 : 325;
+        const maxHealth = 3 + (player.health > 3 ? player.health - 3 : 0);
+        const healthPercent = player.health / maxHealth;
+
+        healthBar.clear();
+        // Background
+        healthBar.fillStyle(0x333333, 1);
+        healthBar.fillRect(panelX + 25, barY, barWidth, barHeight);
+        // Health fill
+        const healthColor = healthPercent > 0.5 ? 0x00ff00 : healthPercent > 0.25 ? 0xffff00 : 0xff0000;
+        healthBar.fillStyle(healthColor, 1);
+        healthBar.fillRect(panelX + 25, barY, barWidth * healthPercent, barHeight);
+        // Border
+        healthBar.lineStyle(1, 0xffffff, 0.5);
+        healthBar.strokeRect(panelX + 25, barY, barWidth, barHeight);
+      }
+
+      // Update health text
       if (this.healthTexts[index]) {
-        this.healthTexts[index].setText(`HEALTH: ${player.health}`);
+        this.healthTexts[index].setText(`${player.health}`);
+      }
+
+      // Update power-up indicators
+      if (this.powerUpIndicators[index]) {
+        this.updatePowerUpIndicator(this.powerUpIndicators[index], player);
       }
     });
+  }
+
+  private updatePowerUpIndicator(container: Phaser.GameObjects.Container, player: Bamster): void {
+    // Clear existing indicators
+    container.removeAll(true);
+
+    let xOffset = 0;
+    const spacing = 25;
+
+    // Show active power-ups
+    if (player.jumpPower > 1) {
+      const sneakerIcon = this.add.text(xOffset, 0, '👟', { fontSize: '16px' });
+      container.add(sneakerIcon);
+      xOffset += spacing;
+    }
+
+    if (player.weaponType !== 'basic') {
+      const weaponIcons: Record<string, string> = {
+        rapid: '⚡',
+        spread: '🔥',
+        piercing: '💎',
+      };
+      const weaponIcon = this.add.text(xOffset, 0, weaponIcons[player.weaponType] || '🔫', { fontSize: '16px' });
+      container.add(weaponIcon);
+      xOffset += spacing;
+    }
   }
 
   private checkGameOver(): void {

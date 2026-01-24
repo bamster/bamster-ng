@@ -32,18 +32,23 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
 
   private sneakersTimer?: Phaser.Time.TimerEvent;
   private weaponTimer?: Phaser.Time.TimerEvent;
+  private texturePrefix: string = 'bamster';
 
   constructor(
     scene: Phaser.Scene,
     x: number,
     y: number,
     playerId: string,
-    laserGroup: Phaser.Physics.Arcade.Group
+    laserGroup: Phaser.Physics.Arcade.Group,
+    playerNumber: number = 1
   ) {
-    super(scene, x, y, 'bamster');
+    // Player 2 uses different textures (blue cape)
+    const texturePrefix = playerNumber === 2 ? 'bamster_p2' : 'bamster';
+    super(scene, x, y, texturePrefix);
 
     this.playerId = playerId;
     this.laserGroup = laserGroup;
+    this.texturePrefix = texturePrefix;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -290,18 +295,20 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   private updateSprite(velocityY: number, onGround: boolean): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const isMovingHorizontally = Math.abs(body.velocity.x) > 10;
+    const p = this.texturePrefix;
+    const left = p === 'bamster_p2' ? '_left' : '_left';
 
     if (onGround) {
       if (isMovingHorizontally) {
         // Running - play run animation
-        const animKey = this.facingRight ? 'bamster_run' : 'bamster_left_run';
+        const animKey = this.facingRight ? `${p}_run` : `${p}${left}_run`;
         if (this.anims.currentAnim?.key !== animKey) {
           this.play(animKey);
         }
       } else {
         // Standing still - use idle sprite
         this.stop();
-        const textureName = this.facingRight ? 'bamster' : 'bamster_left';
+        const textureName = this.facingRight ? p : `${p}${left}`;
         if (this.texture.key !== textureName) {
           this.setTexture(textureName);
         }
@@ -309,21 +316,21 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     } else if (velocityY < -50) {
       // Going up (jumping) - use jump sprite
       this.stop();
-      const textureName = this.facingRight ? 'bamster_jump' : 'bamster_left_jump';
+      const textureName = this.facingRight ? `${p}_jump` : `${p}${left}_jump`;
       if (this.texture.key !== textureName) {
         this.setTexture(textureName);
       }
     } else if (velocityY > 50) {
       // Falling - use fall sprite
       this.stop();
-      const textureName = this.facingRight ? 'bamster_fall' : 'bamster_left_fall';
+      const textureName = this.facingRight ? `${p}_fall` : `${p}${left}_fall`;
       if (this.texture.key !== textureName) {
         this.setTexture(textureName);
       }
     } else {
       // Near apex of jump - use normal sprite
       this.stop();
-      const textureName = this.facingRight ? 'bamster' : 'bamster_left';
+      const textureName = this.facingRight ? p : `${p}${left}`;
       if (this.texture.key !== textureName) {
         this.setTexture(textureName);
       }

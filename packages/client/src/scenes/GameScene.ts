@@ -60,8 +60,9 @@ export class GameScene extends Phaser.Scene {
   // UI
   private scoreTexts: Phaser.GameObjects.Text[] = [];
   private healthTexts: Phaser.GameObjects.Text[] = [];
-  private healthBars: Phaser.GameObjects.Graphics[] = [];
+  private heartContainers: Phaser.GameObjects.Container[] = [];
   private powerUpIndicators: Phaser.GameObjects.Container[] = [];
+  private maxHearts: number = 5;
   private highScore: number = 0;
 
   // Combo system
@@ -112,7 +113,7 @@ export class GameScene extends Phaser.Scene {
     this.players = [];
     this.scoreTexts = [];
     this.healthTexts = [];
-    this.healthBars = [];
+    this.heartContainers = [];
     this.powerUpIndicators = [];
     // Load high score from localStorage
     const savedHighScore = localStorage.getItem('bamster_highscore');
@@ -1562,16 +1563,12 @@ export class GameScene extends Phaser.Scene {
         })
       );
 
-      // Health bar for Player 2
-      this.add.text(panelX, 325, 'HP', {
-        fontSize: '12px',
-        fontFamily: 'monospace',
-        color: '#ff4444',
-      });
-      const healthBar2 = this.add.graphics();
-      this.healthBars.push(healthBar2);
+      // Heart icons for Player 2
+      const heartContainer2 = this.add.container(panelX, 325);
+      this.createHeartDisplay(heartContainer2);
+      this.heartContainers.push(heartContainer2);
       this.healthTexts.push(
-        this.add.text(panelX + 100, 325, '3', {
+        this.add.text(panelX + 120, 325, '', {
           fontSize: '12px',
           fontFamily: 'monospace',
           color: '#ff4444',
@@ -1608,38 +1605,23 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateUI(): void {
-    const panelX = PLAY_AREA_WIDTH + 20;
-    const barWidth = 80;
-    const barHeight = 12;
-
     this.players.forEach((player, index) => {
       if (this.scoreTexts[index]) {
         this.scoreTexts[index].setText(`SCORE: ${player.score}`);
       }
 
-      // Update health bar
-      if (this.healthBars[index]) {
-        const healthBar = this.healthBars[index];
-        const barY = index === 0 ? 185 : 325;
-        const maxHealth = 3 + (player.health > 3 ? player.health - 3 : 0);
-        const healthPercent = player.health / maxHealth;
-
-        healthBar.clear();
-        // Background
-        healthBar.fillStyle(0x333333, 1);
-        healthBar.fillRect(panelX + 25, barY, barWidth, barHeight);
-        // Health fill
-        const healthColor = healthPercent > 0.5 ? 0x00ff00 : healthPercent > 0.25 ? 0xffff00 : 0xff0000;
-        healthBar.fillStyle(healthColor, 1);
-        healthBar.fillRect(panelX + 25, barY, barWidth * healthPercent, barHeight);
-        // Border
-        healthBar.lineStyle(1, 0xffffff, 0.5);
-        healthBar.strokeRect(panelX + 25, barY, barWidth, barHeight);
+      // Update heart display
+      if (this.heartContainers[index]) {
+        this.updateHeartDisplay(this.heartContainers[index], player.health);
       }
 
-      // Update health text
+      // Update health text (show extra lives beyond max hearts)
       if (this.healthTexts[index]) {
-        this.healthTexts[index].setText(`${player.health}`);
+        if (player.health > this.maxHearts) {
+          this.healthTexts[index].setText(`+${player.health - this.maxHearts}`);
+        } else {
+          this.healthTexts[index].setText('');
+        }
       }
 
       // Update power-up indicators
@@ -1647,6 +1629,32 @@ export class GameScene extends Phaser.Scene {
         this.updatePowerUpIndicator(this.powerUpIndicators[index], player);
       }
     });
+  }
+
+  private createHeartDisplay(container: Phaser.GameObjects.Container): void {
+    const heartSpacing = 22;
+    for (let i = 0; i < this.maxHearts; i++) {
+      const heart = this.add.sprite(i * heartSpacing, 0, 'heart');
+      heart.setName(`heart_${i}`);
+      container.add(heart);
+    }
+  }
+
+  private updateHeartDisplay(container: Phaser.GameObjects.Container, health: number): void {
+    for (let i = 0; i < this.maxHearts; i++) {
+      const heart = container.getByName(`heart_${i}`) as Phaser.GameObjects.Sprite;
+      if (heart) {
+        if (i < health) {
+          // Full heart
+          heart.setTexture('heart');
+          heart.setAlpha(1);
+        } else {
+          // Empty heart
+          heart.setTexture('heart_empty');
+          heart.setAlpha(0.5);
+        }
+      }
+    }
   }
 
   private updatePowerUpIndicator(container: Phaser.GameObjects.Container, player: Bamster): void {

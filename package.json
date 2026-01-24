@@ -1,0 +1,20 @@
+{
+  "name": "bamster",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BAMster - A Tetris-meets-platformer game with a hamster and laser pistol",
+  "scripts": {
+    "dev": "pnpm --filter @bamster/client dev",
+    "dev:server": "pnpm --filter @bamster/server dev",
+    "dev:all": "pnpm run --parallel /dev/",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "keywords": ["game", "phaser", "tetris", "platformer"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

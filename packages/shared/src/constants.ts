@@ -8,6 +8,7 @@ export const FRAME_WIDTH = 4;
 export const GRAVITY = 800;
 export const BAMSTER_SPEED = 200;
 export const BAMSTER_JUMP_VELOCITY = -400;
+export const BAMSTER_STARTING_HEALTH = 3;
 export const BLOCK_FALL_SPEED = 120;
 export const BLOCK_FALL_SPEED_INCREMENT = 15; // Speed increase per minute
 export const LASER_SPEED = 600;

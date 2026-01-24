@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {
   BAMSTER_SPEED,
   BAMSTER_JUMP_VELOCITY,
+  BAMSTER_STARTING_HEALTH,
   NORMAL_FIRE_COOLDOWN,
   RAPID_FIRE_COOLDOWN,
   SPREAD_SHOT_ANGLE,
@@ -15,7 +16,7 @@ import { Laser } from './Laser';
 
 export class Bamster extends Phaser.Physics.Arcade.Sprite {
   public playerId: string;
-  public health: number = 1;
+  public health: number = BAMSTER_STARTING_HEALTH;
   public jumpPower: number = 1;
   public weaponType: WeaponType = 'basic';
   public score: number = 0;

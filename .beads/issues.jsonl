@@ -1,5 +1,6 @@
 {"id":"BAM-0li","title":"Implement input prediction and reconciliation","status":"open","priority":1,"issue_type":"task","created_at":"2026-01-24T23:33:14.970494+01:00","created_by":"cg","updated_at":"2026-01-24T23:33:14.970494+01:00"}
 {"id":"BAM-1bq","title":"Configure production builds","status":"open","priority":2,"issue_type":"task","created_at":"2026-01-24T23:33:31.899695+01:00","created_by":"cg","updated_at":"2026-01-24T23:33:31.899695+01:00"}
+{"id":"BAM-1em","title":"subtitle should be It's BAMster time","status":"open","priority":2,"issue_type":"bug","created_at":"2026-01-24T23:48:10.166066+01:00","created_by":"cg","updated_at":"2026-01-24T23:48:10.166066+01:00"}
 {"id":"BAM-1ma","title":"Implement virtual joystick (touch controls)","status":"open","priority":2,"issue_type":"task","created_at":"2026-01-24T23:33:23.328007+01:00","created_by":"cg","updated_at":"2026-01-24T23:33:23.328007+01:00"}
 {"id":"BAM-276","title":"Improve UI design (health bar, power-up indicators)","status":"open","priority":2,"issue_type":"task","created_at":"2026-01-24T23:33:00.174284+01:00","created_by":"cg","updated_at":"2026-01-24T23:33:00.174284+01:00"}
 {"id":"BAM-28p","title":"Add combo counter display","status":"open","priority":2,"issue_type":"task","created_at":"2026-01-24T23:33:00.265253+01:00","created_by":"cg","updated_at":"2026-01-24T23:33:00.265253+01:00"}
@@ -48,4 +49,4 @@
 {"id":"BAM-vop","title":"Add touch button for shooting","status":"open","priority":2,"issue_type":"task","created_at":"2026-01-24T23:33:23.418249+01:00","created_by":"cg","updated_at":"2026-01-24T23:33:23.418249+01:00"}
 {"id":"BAM-x7o","title":"Add spectator mode","status":"open","priority":3,"issue_type":"task","created_at":"2026-01-24T23:33:14.788377+01:00","created_by":"cg","updated_at":"2026-01-24T23:33:14.788377+01:00"}
 {"id":"BAM-yam","title":"Add difficulty selection (easy/normal/hard)","status":"open","priority":3,"issue_type":"task","created_at":"2026-01-24T23:33:09.515591+01:00","created_by":"cg","updated_at":"2026-01-24T23:33:09.515591+01:00"}
-{"id":"BAM-yz3","title":"create early goody drops","status":"open","priority":2,"issue_type":"bug","created_at":"2026-01-24T23:35:45.73114+01:00","created_by":"cg","updated_at":"2026-01-24T23:35:45.73114+01:00"}
+{"id":"BAM-yz3","title":"create early goody drops","status":"in_progress","priority":2,"issue_type":"bug","created_at":"2026-01-24T23:35:45.73114+01:00","created_by":"cg","updated_at":"2026-01-24T23:47:33.387231+01:00"}

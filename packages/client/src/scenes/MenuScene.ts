@@ -91,20 +91,15 @@ export class MenuScene extends Phaser.Scene {
       this.startGame('online');
     });
 
-    // Controls help - updated for new controls
-    const controlsText = [
-      '─── CONTROLS ───',
-      '← →  MOVE',
-      '↑ W  JUMP',
-      'SPACE  FIRE',
-    ].join('\n');
+    this.createButton(GAME_WIDTH / 2, 530, '⚙ SETTINGS', () => {
+      this.scene.start('SettingsScene');
+    });
 
-    const controls = this.add.text(GAME_WIDTH / 2, 555, controlsText, {
-      fontSize: '14px',
+    // Controls hint
+    const controls = this.add.text(GAME_WIDTH / 2, 590, '← → MOVE  |  ↑ W JUMP  |  SPACE FIRE', {
+      fontSize: '12px',
       fontFamily: 'monospace',
       color: '#666688',
-      align: 'center',
-      lineSpacing: 4,
     });
     controls.setOrigin(0.5);
 

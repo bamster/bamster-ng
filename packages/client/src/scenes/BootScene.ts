@@ -78,6 +78,9 @@ export class BootScene extends Phaser.Scene {
 
     // Generate power-up textures
     this.generatePowerUpTextures();
+
+    // Generate particle texture for effects
+    this.generateParticleTexture();
   }
 
   create(): void {
@@ -370,6 +373,15 @@ export class BootScene extends Phaser.Scene {
     piercingGraphics.strokeCircle(30, 13, 4);
     piercingGraphics.generateTexture('powerup_piercing', 36, 28);
     piercingGraphics.destroy();
+  }
+
+  private generateParticleTexture(): void {
+    // Small square particle for block destruction effects
+    const graphics = this.make.graphics({ x: 0, y: 0 });
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillRect(0, 0, 6, 6);
+    graphics.generateTexture('particle', 6, 6);
+    graphics.destroy();
   }
 
   private createAnimations(): void {

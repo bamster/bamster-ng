@@ -7,8 +7,12 @@ import { Laser } from '../entities/Laser';
 import { PowerUp } from '../entities/PowerUp';
 import { BlockSpawner } from '../systems/BlockSpawner';
 import { InputManager } from '../systems/InputManager';
-// Network imports (for future online multiplayer - see BAM-tp5)
-// import { NetworkManager, type NetworkState } from '../systems/NetworkManager';
+import {
+  NetworkManager,
+  type NetworkState,
+  type PlayerNetState,
+  type BlockNetState,
+} from '../systems/NetworkManager';
 
 // 80s color palette
 const COLORS = {
@@ -51,8 +55,18 @@ export class GameScene extends Phaser.Scene {
   private isPaused: boolean = false;
   private pauseOverlay?: Phaser.GameObjects.Container;
 
-  // Online multiplayer (to be implemented - see BAM-tp5)
-  // Network properties will be added when implementing online mode
+  // Online multiplayer
+  private networkManager?: NetworkManager;
+  private localPlayerId?: string;
+  private networkState?: NetworkState;
+  private isWaitingForPlayers: boolean = false;
+  private connectionOverlay?: Phaser.GameObjects.Container;
+
+  // Network entity maps (for syncing server state to visual objects)
+  private networkPlayers: Map<string, Phaser.GameObjects.Container> = new Map();
+  private networkBlocks: Map<string, Phaser.GameObjects.Container> = new Map();
+  private networkLasers: Map<string, Phaser.GameObjects.Sprite> = new Map();
+  private networkPowerUps: Map<string, Phaser.GameObjects.Sprite> = new Map();
 
   constructor() {
     super({ key: 'GameScene' });
@@ -68,6 +82,17 @@ export class GameScene extends Phaser.Scene {
     // Load high score from localStorage
     const savedHighScore = localStorage.getItem('bamster_highscore');
     this.highScore = savedHighScore ? parseInt(savedHighScore, 10) : 0;
+
+    // Reset network state
+    this.networkManager = undefined;
+    this.localPlayerId = undefined;
+    this.networkState = undefined;
+    this.isWaitingForPlayers = false;
+    this.connectionOverlay = undefined;
+    this.networkPlayers = new Map();
+    this.networkBlocks = new Map();
+    this.networkLasers = new Map();
+    this.networkPowerUps = new Map();
   }
 
   create(): void {
@@ -98,10 +123,9 @@ export class GameScene extends Phaser.Scene {
     // Create input manager
     this.inputManager = new InputManager(this);
 
-    // Online mode not yet implemented - see BAM-tp5 epic
+    // Handle online mode differently
     if (this.mode === 'online') {
-      console.warn('Online mode not yet implemented');
-      this.scene.start('MenuScene');
+      this.setupOnlineMode();
       return;
     }
 
@@ -326,6 +350,470 @@ export class GameScene extends Phaser.Scene {
     bgGraphics.lineStyle(2, COLORS.textNeon, 0.8);
     bgGraphics.lineBetween(PLAY_AREA_WIDTH + 20, 55, GAME_WIDTH - 20, 55);
   }
+
+  // ============================================
+  // Online Multiplayer Methods
+  // ============================================
+
+  private setupOnlineMode(): void {
+    this.showConnectionOverlay('CONNECTING...');
+
+    // Create network manager and connect
+    this.networkManager = new NetworkManager();
+
+    this.networkManager.setOnConnected((playerId) => {
+      this.localPlayerId = playerId;
+      this.isWaitingForPlayers = true;
+      this.updateConnectionOverlay('WAITING FOR OPPONENT...');
+
+      // Send ready signal
+      this.networkManager?.sendReady();
+    });
+
+    this.networkManager.setOnStateChange((state) => {
+      this.networkState = state;
+
+      // Check if game has started (2 players and running)
+      if (state.isRunning && this.isWaitingForPlayers) {
+        this.isWaitingForPlayers = false;
+        this.hideConnectionOverlay();
+        this.createOnlineUI();
+      }
+
+      // Check for game over
+      if (state.isGameOver && !this.isGameOver) {
+        this.handleOnlineGameOver(state.winnerId);
+      }
+    });
+
+    this.networkManager.setOnDisconnected(() => {
+      if (!this.isGameOver) {
+        this.showConnectionOverlay('DISCONNECTED');
+        this.time.delayedCall(2000, () => {
+          this.scene.start('MenuScene');
+        });
+      }
+    });
+
+    this.networkManager.setOnError((error) => {
+      console.error('Network error:', error);
+      this.showConnectionOverlay('CONNECTION FAILED');
+      this.time.delayedCall(2000, () => {
+        this.scene.start('MenuScene');
+      });
+    });
+
+    // Start connection
+    this.networkManager.quickMatch().catch((error) => {
+      console.error('Failed to connect:', error);
+    });
+
+    // Setup pause/quit key for online mode
+    this.input.keyboard?.on('keydown-ESC', () => {
+      if (!this.isGameOver) {
+        this.networkManager?.disconnect();
+        this.scene.start('MenuScene');
+      }
+    });
+  }
+
+  private showConnectionOverlay(message: string): void {
+    if (this.connectionOverlay) {
+      this.connectionOverlay.destroy(true);
+    }
+
+    this.connectionOverlay = this.add.container(0, 0);
+    this.connectionOverlay.setDepth(200);
+
+    // Semi-transparent background
+    const bg = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      0x000000,
+      0.8
+    );
+    this.connectionOverlay.add(bg);
+
+    // Message text
+    const text = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, message, {
+      fontSize: '32px',
+      fontFamily: 'monospace',
+      color: '#00ffff',
+      stroke: '#004444',
+      strokeThickness: 2,
+    });
+    text.setOrigin(0.5);
+    text.setName('message');
+    this.connectionOverlay.add(text);
+
+    // Pulsing animation
+    this.tweens.add({
+      targets: text,
+      alpha: 0.5,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+    });
+  }
+
+  private updateConnectionOverlay(message: string): void {
+    if (this.connectionOverlay) {
+      const text = this.connectionOverlay.getByName('message') as Phaser.GameObjects.Text;
+      if (text) {
+        text.setText(message);
+      }
+    }
+  }
+
+  private hideConnectionOverlay(): void {
+    if (this.connectionOverlay) {
+      this.connectionOverlay.destroy(true);
+      this.connectionOverlay = undefined;
+    }
+  }
+
+  private createOnlineUI(): void {
+    const panelX = PLAY_AREA_WIDTH + 20;
+    const panelCenterX = PLAY_AREA_WIDTH + (GAME_WIDTH - PLAY_AREA_WIDTH) / 2;
+
+    // Online mode indicator
+    this.add.text(panelCenterX, 70, 'ONLINE MATCH', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#00ff00',
+    }).setOrigin(0.5);
+
+    // Room ID display
+    const roomId = this.networkManager?.getRoomId() || '';
+    this.add.text(panelCenterX, 90, `ROOM: ${roomId.slice(0, 8)}`, {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#666666',
+    }).setOrigin(0.5);
+
+    // Player 1 (You) UI
+    const isFirstPlayer = this.getPlayerIndex() === 0;
+    this.add.text(panelCenterX, 130, isFirstPlayer ? 'YOU (P1)' : 'OPPONENT (P1)', {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: isFirstPlayer ? '#00ffff' : '#ff88ff',
+    }).setOrigin(0.5);
+
+    this.scoreTexts.push(
+      this.add.text(panelX, 155, 'SCORE: 0', {
+        fontSize: '20px',
+        fontFamily: 'monospace',
+        color: '#ffff00',
+      })
+    );
+    this.healthTexts.push(
+      this.add.text(panelX, 185, 'HEALTH: 3', {
+        fontSize: '16px',
+        fontFamily: 'monospace',
+        color: '#ff4444',
+      })
+    );
+
+    // Divider
+    const graphics = this.add.graphics();
+    graphics.lineStyle(1, COLORS.textNeon, 0.5);
+    graphics.lineBetween(PLAY_AREA_WIDTH + 20, 230, GAME_WIDTH - 20, 230);
+
+    // Player 2 UI
+    this.add.text(panelCenterX, 250, isFirstPlayer ? 'OPPONENT (P2)' : 'YOU (P2)', {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: isFirstPlayer ? '#ff88ff' : '#00ffff',
+    }).setOrigin(0.5);
+
+    this.scoreTexts.push(
+      this.add.text(panelX, 275, 'SCORE: 0', {
+        fontSize: '20px',
+        fontFamily: 'monospace',
+        color: '#ffff00',
+      })
+    );
+    this.healthTexts.push(
+      this.add.text(panelX, 305, 'HEALTH: 3', {
+        fontSize: '16px',
+        fontFamily: 'monospace',
+        color: '#ff4444',
+      })
+    );
+
+    // Controls hint
+    const controlsY = GAME_HEIGHT - 100;
+    this.add.text(panelCenterX, controlsY, 'ESC TO QUIT', {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#666666',
+    }).setOrigin(0.5);
+  }
+
+  private getPlayerIndex(): number {
+    if (!this.networkState || !this.localPlayerId) return 0;
+    const playerIds = Array.from(this.networkState.players.keys());
+    return playerIds.indexOf(this.localPlayerId);
+  }
+
+  private handleOnlineGameOver(winnerId: string): void {
+    this.isGameOver = true;
+
+    // Disconnect from server
+    this.networkManager?.disconnect();
+
+    // Determine scores from network state
+    const scores: Array<{ playerId: string; score: number; isAlive: boolean }> = [];
+    this.networkState?.players.forEach((player, id) => {
+      scores.push({
+        playerId: id,
+        score: player.score,
+        isAlive: player.isAlive,
+      });
+    });
+
+    // Did local player win?
+    const localWon = winnerId === this.localPlayerId;
+
+    this.scene.start('GameOverScene', {
+      mode: this.mode,
+      scores,
+      winner: winnerId,
+      isOnline: true,
+      localWon,
+    });
+  }
+
+  private syncNetworkState(): void {
+    if (!this.networkState) return;
+
+    // Sync players
+    this.syncNetworkPlayers();
+
+    // Sync blocks
+    this.syncNetworkBlocks();
+
+    // Sync lasers
+    this.syncNetworkLasers();
+
+    // Sync power-ups
+    this.syncNetworkPowerUps();
+
+    // Update UI from network state
+    this.updateOnlineUI();
+  }
+
+  private syncNetworkPlayers(): void {
+    if (!this.networkState) return;
+
+    const currentIds = new Set(this.networkState.players.keys());
+
+    // Remove players that no longer exist
+    this.networkPlayers.forEach((container, id) => {
+      if (!currentIds.has(id)) {
+        container.destroy(true);
+        this.networkPlayers.delete(id);
+      }
+    });
+
+    // Update or create players
+    this.networkState.players.forEach((playerState, id) => {
+      let container = this.networkPlayers.get(id);
+
+      if (!container) {
+        // Create new player visual
+        container = this.createNetworkPlayer(id, playerState);
+        this.networkPlayers.set(id, container);
+      }
+
+      // Update position and state
+      this.updateNetworkPlayer(container, playerState, id === this.localPlayerId);
+    });
+  }
+
+  private createNetworkPlayer(id: string, state: PlayerNetState): Phaser.GameObjects.Container {
+    const container = this.add.container(state.x, state.y);
+
+    // Create sprite
+    const sprite = this.add.sprite(0, 0, 'bamster');
+    sprite.setName('sprite');
+    container.add(sprite);
+
+    // Tint opponent differently
+    if (id !== this.localPlayerId) {
+      sprite.setTint(0xaaaaff);
+    }
+
+    return container;
+  }
+
+  private updateNetworkPlayer(
+    container: Phaser.GameObjects.Container,
+    state: PlayerNetState,
+    isLocal: boolean
+  ): void {
+    // Smooth interpolation for remote players, direct for local
+    if (isLocal) {
+      container.x = state.x;
+      container.y = state.y;
+    } else {
+      // Lerp towards server position
+      container.x = Phaser.Math.Linear(container.x, state.x, 0.3);
+      container.y = Phaser.Math.Linear(container.y, state.y, 0.3);
+    }
+
+    const sprite = container.getByName('sprite') as Phaser.GameObjects.Sprite;
+    if (sprite) {
+      // Update texture based on state
+      if (!state.isAlive) {
+        sprite.setVisible(false);
+      } else {
+        sprite.setVisible(true);
+        sprite.setTexture(state.facingRight ? 'bamster' : 'bamster_left');
+      }
+    }
+  }
+
+  private syncNetworkBlocks(): void {
+    if (!this.networkState) return;
+
+    const currentIds = new Set(this.networkState.blocks.keys());
+
+    // Remove blocks that no longer exist
+    this.networkBlocks.forEach((container, id) => {
+      if (!currentIds.has(id)) {
+        container.destroy(true);
+        this.networkBlocks.delete(id);
+      }
+    });
+
+    // Update or create blocks
+    this.networkState.blocks.forEach((blockState, id) => {
+      let container = this.networkBlocks.get(id);
+
+      if (!container) {
+        // Create new block visual
+        container = this.createNetworkBlock(blockState);
+        this.networkBlocks.set(id, container);
+      }
+
+      // Update position
+      container.x = blockState.x;
+      container.y = blockState.y;
+    });
+  }
+
+  private createNetworkBlock(state: BlockNetState): Phaser.GameObjects.Container {
+    const container = this.add.container(state.x, state.y);
+
+    // Create block sprite
+    const sprite = this.add.sprite(0, 0, `block_${state.color}`);
+    sprite.setName('sprite');
+    container.add(sprite);
+
+    return container;
+  }
+
+  private syncNetworkLasers(): void {
+    if (!this.networkState) return;
+
+    const currentIds = new Set(this.networkState.lasers.keys());
+
+    // Remove lasers that no longer exist
+    this.networkLasers.forEach((sprite, id) => {
+      if (!currentIds.has(id)) {
+        sprite.destroy();
+        this.networkLasers.delete(id);
+      }
+    });
+
+    // Update or create lasers
+    this.networkState.lasers.forEach((laserState, id) => {
+      let sprite = this.networkLasers.get(id);
+
+      if (!sprite) {
+        // Create new laser visual
+        sprite = this.add.sprite(laserState.x, laserState.y, 'laser');
+        if (laserState.isPiercing) {
+          sprite.setTint(0x00ffff);
+          sprite.setScale(1.5, 1);
+        }
+        // Set rotation based on velocity
+        sprite.setRotation(Math.atan2(laserState.vy, laserState.vx));
+        this.networkLasers.set(id, sprite);
+      }
+
+      // Update position
+      sprite.x = laserState.x;
+      sprite.y = laserState.y;
+    });
+  }
+
+  private syncNetworkPowerUps(): void {
+    if (!this.networkState) return;
+
+    const currentIds = new Set(this.networkState.powerUps.keys());
+
+    // Remove power-ups that no longer exist
+    this.networkPowerUps.forEach((sprite, id) => {
+      if (!currentIds.has(id)) {
+        sprite.destroy();
+        this.networkPowerUps.delete(id);
+      }
+    });
+
+    // Update or create power-ups
+    this.networkState.powerUps.forEach((powerUpState, id) => {
+      let sprite = this.networkPowerUps.get(id);
+
+      if (!sprite) {
+        // Create new power-up visual
+        sprite = this.add.sprite(
+          powerUpState.x,
+          powerUpState.y,
+          `powerup_${powerUpState.powerUpType}`
+        );
+        sprite.setTint(0xffffaa);
+        this.networkPowerUps.set(id, sprite);
+      }
+
+      // Update position
+      sprite.x = powerUpState.x;
+      sprite.y = powerUpState.y;
+    });
+  }
+
+  private updateOnlineUI(): void {
+    if (!this.networkState) return;
+
+    const playerIds = Array.from(this.networkState.players.keys());
+
+    playerIds.forEach((id, index) => {
+      const player = this.networkState!.players.get(id);
+      if (player && this.scoreTexts[index] && this.healthTexts[index]) {
+        this.scoreTexts[index].setText(`SCORE: ${player.score}`);
+        this.healthTexts[index].setText(`HEALTH: ${player.health}`);
+      }
+    });
+  }
+
+  private handleOnlineInput(): void {
+    const input = this.inputManager.getPlayer1Input();
+
+    // Send input to server
+    this.networkManager?.sendInput({
+      left: input.left,
+      right: input.right,
+      jump: input.jump,
+      shoot: input.shoot,
+    });
+  }
+
+  // ============================================
+  // End Online Multiplayer Methods
+  // ============================================
 
   private createPlayers(): void {
     // Player 1 - position within play area
@@ -802,6 +1290,13 @@ export class GameScene extends Phaser.Scene {
 
   update(): void {
     if (this.isGameOver || this.isPaused) return;
+
+    // Handle online mode differently
+    if (this.mode === 'online') {
+      this.handleOnlineInput();
+      this.syncNetworkState();
+      return;
+    }
 
     // Handle input for each player
     this.handlePlayerInput();

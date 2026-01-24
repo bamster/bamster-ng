@@ -86,6 +86,12 @@ export class GameScene extends Phaser.Scene {
   private networkLasers: Map<string, Phaser.GameObjects.Sprite> = new Map();
   private networkPowerUps: Map<string, Phaser.GameObjects.Sprite> = new Map();
 
+  // Parallax background layers
+  private parallaxStars: { x: number; y: number; size: number; alpha: number; speed: number }[] = [];
+  private parallaxGridOffset: number = 0;
+  private starGraphics?: Phaser.GameObjects.Graphics;
+  private gridGraphics?: Phaser.GameObjects.Graphics;
+
   // Input prediction state for local player
   private predictedX: number = 0;
   private predictedY: number = 0;
@@ -132,9 +138,18 @@ export class GameScene extends Phaser.Scene {
     this.comboCount = 0;
     this.comboTimer = undefined;
     this.comboText = undefined;
+
+    // Reset parallax state
+    this.parallaxStars = [];
+    this.parallaxGridOffset = 0;
+    this.starGraphics = undefined;
+    this.gridGraphics = undefined;
   }
 
   create(): void {
+    // Create parallax background layers (deepest first)
+    this.createParallaxBackground();
+
     // Draw retro background and frame
     this.createRetroFrame();
 
@@ -323,6 +338,120 @@ export class GameScene extends Phaser.Scene {
     if (this.pauseOverlay) {
       this.pauseOverlay.destroy(true);
       this.pauseOverlay = undefined;
+    }
+  }
+
+  private createParallaxBackground(): void {
+    // Create distant star field (very slow parallax)
+    const starGraphics = this.add.graphics();
+    starGraphics.setDepth(-30);
+
+    // Generate random stars with varying sizes and speeds
+    for (let i = 0; i < 60; i++) {
+      const star = {
+        x: Phaser.Math.Between(FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH),
+        y: Phaser.Math.Between(FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH),
+        size: Phaser.Math.FloatBetween(0.5, 2),
+        alpha: Phaser.Math.FloatBetween(0.2, 0.7),
+        speed: Phaser.Math.FloatBetween(0.1, 0.4), // Slow drift speed
+      };
+      this.parallaxStars.push(star);
+    }
+
+    // Draw initial stars
+    this.drawParallaxStars(starGraphics);
+
+    // Store reference for updates
+    this.starGraphics = starGraphics;
+
+    // Create moving grid layer (medium parallax)
+    this.gridGraphics = this.add.graphics();
+    this.gridGraphics.setDepth(-20);
+
+    // Draw initial grid
+    this.drawParallaxGrid(this.gridGraphics);
+  }
+
+  private drawParallaxStars(graphics: Phaser.GameObjects.Graphics): void {
+    graphics.clear();
+
+    // Twinkling effect using time
+    const time = this.time.now * 0.001;
+
+    this.parallaxStars.forEach((star, index) => {
+      // Subtle twinkle by varying alpha
+      const twinkle = Math.sin(time * 2 + index) * 0.2 + 0.8;
+      const alpha = star.alpha * twinkle;
+
+      // Neon star colors (cyan, magenta, white)
+      const colors = [0x00ffff, 0xff00ff, 0xffffff, 0x8844ff];
+      const color = colors[index % colors.length];
+
+      graphics.fillStyle(color, alpha);
+      graphics.fillCircle(star.x, star.y, star.size);
+
+      // Add glow for larger stars
+      if (star.size > 1.2) {
+        graphics.fillStyle(color, alpha * 0.3);
+        graphics.fillCircle(star.x, star.y, star.size * 2);
+      }
+    });
+  }
+
+  private drawParallaxGrid(graphics: Phaser.GameObjects.Graphics): void {
+    graphics.clear();
+
+    const gridSpacing = 60;
+    const playAreaLeft = FRAME_WIDTH;
+    const playAreaRight = PLAY_AREA_WIDTH - FRAME_WIDTH;
+    const playAreaTop = FRAME_WIDTH;
+    const playAreaBottom = GAME_HEIGHT - FRAME_WIDTH;
+
+    // Offset for animation
+    const offset = this.parallaxGridOffset % gridSpacing;
+
+    // Vertical lines (moving slowly left)
+    graphics.lineStyle(1, COLORS.frameNeon, 0.08);
+    for (let x = playAreaLeft - offset; x <= playAreaRight; x += gridSpacing) {
+      if (x >= playAreaLeft && x <= playAreaRight) {
+        graphics.lineBetween(x, playAreaTop, x, playAreaBottom);
+      }
+    }
+
+    // Horizontal lines (static, perspective effect)
+    for (let y = playAreaTop; y <= playAreaBottom; y += gridSpacing) {
+      // Lines get brighter toward bottom for depth
+      const depth = (y - playAreaTop) / (playAreaBottom - playAreaTop);
+      graphics.lineStyle(1, COLORS.frameNeon, 0.04 + depth * 0.06);
+      graphics.lineBetween(playAreaLeft, y, playAreaRight, y);
+    }
+  }
+
+  private updateParallax(): void {
+    // Update star positions (slow drift upward)
+    const deltaTime = this.game.loop.delta / 1000;
+
+    this.parallaxStars.forEach((star) => {
+      star.y -= star.speed * 20 * deltaTime;
+
+      // Wrap around when off screen
+      if (star.y < FRAME_WIDTH) {
+        star.y = GAME_HEIGHT - FRAME_WIDTH;
+        star.x = Phaser.Math.Between(FRAME_WIDTH, PLAY_AREA_WIDTH - FRAME_WIDTH);
+      }
+    });
+
+    // Redraw stars with twinkling
+    if (this.starGraphics) {
+      this.drawParallaxStars(this.starGraphics);
+    }
+
+    // Update grid offset (slow horizontal scroll)
+    this.parallaxGridOffset += 15 * deltaTime;
+
+    // Redraw grid
+    if (this.gridGraphics) {
+      this.drawParallaxGrid(this.gridGraphics);
     }
   }
 
@@ -1662,6 +1791,9 @@ export class GameScene extends Phaser.Scene {
 
   update(): void {
     if (this.isGameOver || this.isPaused) return;
+
+    // Update parallax background (runs for all modes)
+    this.updateParallax();
 
     // Handle online mode differently
     if (this.mode === 'online') {

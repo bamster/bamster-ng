@@ -130,6 +130,9 @@ export class GameScene extends Phaser.Scene {
   // Ghost Blocks event state
   private ghostBlocksActive: boolean = false;
 
+  // Earthquake event state
+  private earthquakeTimer?: Phaser.Time.TimerEvent;
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -2479,6 +2482,24 @@ export class GameScene extends Phaser.Scene {
         });
       },
     });
+
+    // Earthquake event - screen shakes, blocks can topple
+    this.eventManager.registerEvent({
+      id: 'earthquake',
+      name: 'EARTHQUAKE',
+      icon: '🌋',
+      duration: 15000, // 15 seconds
+      onStart: (_scene) => {
+        this.startEarthquake();
+      },
+      onEnd: (_scene) => {
+        this.endEarthquake();
+      },
+      onUpdate: (_scene, _delta) => {
+        // Continuous camera shake
+        this.cameras.main.shake(100, 0.003);
+      },
+    });
   }
 
   /**
@@ -2748,6 +2769,66 @@ export class GameScene extends Phaser.Scene {
     this.powerUpGroup.children.each((child) => {
       (child as PowerUp).clearTint();
       return true;
+    });
+  }
+
+  /**
+   * Start the Earthquake event
+   */
+  private startEarthquake(): void {
+    // Start periodic block destabilization
+    this.earthquakeTimer = this.time.addEvent({
+      delay: 1500, // Every 1.5 seconds
+      callback: () => this.destabilizeRandomBlock(),
+      loop: true,
+    });
+
+    // Initial big shake
+    this.cameras.main.shake(500, 0.01);
+  }
+
+  /**
+   * End the Earthquake event
+   */
+  private endEarthquake(): void {
+    if (this.earthquakeTimer) {
+      this.earthquakeTimer.destroy();
+      this.earthquakeTimer = undefined;
+    }
+  }
+
+  /**
+   * Destabilize a random resting block during earthquake
+   */
+  private destabilizeRandomBlock(): void {
+    const restingBlocks = this.blockGroup.children
+      .getArray()
+      .filter((b) => (b as Block).isResting && b.active) as Block[];
+
+    if (restingBlocks.length === 0) return;
+
+    // Pick a random block to destabilize
+    const block = Phaser.Utils.Array.GetRandom(restingBlocks);
+
+    // Make it fall again with slight horizontal movement
+    block.isResting = false;
+    const body = block.body as Phaser.Physics.Arcade.Body;
+    body.setImmovable(false);
+
+    // Random horizontal nudge
+    const nudgeX = Phaser.Math.Between(-50, 50);
+    body.setVelocity(nudgeX, this.blockSpawner.isGravityFlipped() ? -100 : 100);
+
+    // Visual wobble effect
+    this.tweens.add({
+      targets: block,
+      angle: { from: -5, to: 5 },
+      duration: 100,
+      yoyo: true,
+      repeat: 2,
+      onComplete: () => {
+        block.setAngle(0);
+      },
     });
   }
 }

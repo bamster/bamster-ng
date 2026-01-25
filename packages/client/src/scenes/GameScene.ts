@@ -313,11 +313,13 @@ export class GameScene extends Phaser.Scene {
 
     // Debug: Toggle invincibility (F8)
     this.input.keyboard?.on('keydown-F8', () => {
-      if (isDebugMode()) {
+      if (isDebugMode() && this.players.length > 0) {
+        // Toggle based on first player's state, apply same state to all players
+        const newState = !this.players[0].invincible;
         this.players.forEach((player) => {
-          player.invincible = !player.invincible;
+          player.invincible = newState;
           // Quick flash to indicate toggle, then clear
-          player.setTint(player.invincible ? 0x00ff00 : 0xff0000);
+          player.setTint(newState ? 0x00ff00 : 0xff0000);
           this.time.delayedCall(150, () => player.clearTint());
         });
       }

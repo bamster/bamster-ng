@@ -87,6 +87,9 @@ export class BootScene extends Phaser.Scene {
 
     // Generate power-up overlay textures (sneakers, gun upgrades)
     this.generatePowerUpOverlays();
+
+    // Generate achievement badge textures
+    this.generateAchievementBadges();
   }
 
   create(): void {
@@ -696,6 +699,422 @@ export class BootScene extends Phaser.Scene {
 
     graphics.generateTexture(textureName, width, height);
     graphics.destroy();
+  }
+
+  private generateAchievementBadges(): void {
+    const size = 32;
+    const center = size / 2;
+
+    // Badge definitions - each maps to the icon string from achievements
+    const badges: Array<{ icon: string; draw: (g: Phaser.GameObjects.Graphics) => void }> = [
+      // Target icon (🎯) - for First Blood, Sniper
+      {
+        icon: '🎯',
+        draw: (g) => {
+          g.fillStyle(0xff0000, 1);
+          g.fillCircle(center, center, 12);
+          g.fillStyle(0xffffff, 1);
+          g.fillCircle(center, center, 9);
+          g.fillStyle(0xff0000, 1);
+          g.fillCircle(center, center, 6);
+          g.fillStyle(0xffffff, 1);
+          g.fillCircle(center, center, 3);
+        },
+      },
+      // Star icon (🌟)
+      {
+        icon: '🌟',
+        draw: (g) => {
+          g.fillStyle(0xffff00, 1);
+          this.drawStar(g, center, center, 5, 12, 6);
+          g.fillStyle(0xffffff, 0.5);
+          this.drawStar(g, center - 2, center - 2, 5, 8, 4);
+        },
+      },
+      // Corn icon (🌽)
+      {
+        icon: '🌽',
+        draw: (g) => {
+          g.fillStyle(0xffdd00, 1);
+          g.fillEllipse(center, center + 2, 12, 18);
+          g.fillStyle(0x00ff44, 1);
+          g.fillTriangle(center - 6, 4, center, 10, center + 6, 4);
+          g.fillStyle(0xffaa00, 1);
+          for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+              g.fillCircle(center - 4 + col * 4, 12 + row * 5, 2);
+            }
+          }
+        },
+      },
+      // 100 icon (💯)
+      {
+        icon: '💯',
+        draw: (g) => {
+          g.fillStyle(0xff0000, 1);
+          g.fillRect(6, 8, 6, 16);
+          g.fillCircle(17, 18, 5);
+          g.fillCircle(26, 18, 5);
+          g.fillStyle(0x000000, 1);
+          g.fillCircle(17, 18, 2);
+          g.fillCircle(26, 18, 2);
+        },
+      },
+      // Money bag (💰)
+      {
+        icon: '💰',
+        draw: (g) => {
+          g.fillStyle(0xcc8844, 1);
+          g.fillEllipse(center, center + 4, 18, 14);
+          g.fillRect(center - 3, 4, 6, 8);
+          g.fillStyle(0xffff00, 1);
+          g.fillRect(center - 2, center + 1, 4, 8);
+          g.fillRect(center - 4, center + 3, 8, 4);
+        },
+      },
+      // Crown (👑)
+      {
+        icon: '👑',
+        draw: (g) => {
+          g.fillStyle(0xffd700, 1);
+          g.fillRect(6, 16, 20, 10);
+          g.fillTriangle(6, 16, 6, 6, 11, 16);
+          g.fillTriangle(16, 16, 16, 4, 21, 16);
+          g.fillTriangle(26, 16, 26, 6, 21, 16);
+          g.fillStyle(0xff0000, 1);
+          g.fillCircle(8, 10, 2);
+          g.fillCircle(16, 8, 2);
+          g.fillCircle(24, 10, 2);
+        },
+      },
+      // Brick/Block (🧱)
+      {
+        icon: '🧱',
+        draw: (g) => {
+          g.fillStyle(0xcc4400, 1);
+          g.fillRect(4, 6, 24, 20);
+          g.lineStyle(2, 0x884400, 1);
+          g.lineBetween(4, 16, 28, 16);
+          g.lineBetween(16, 6, 16, 16);
+          g.lineBetween(10, 16, 10, 26);
+          g.lineBetween(22, 16, 22, 26);
+        },
+      },
+      // Explosion (💥)
+      {
+        icon: '💥',
+        draw: (g) => {
+          g.fillStyle(0xff4400, 1);
+          this.drawStar(g, center, center, 8, 14, 7);
+          g.fillStyle(0xffff00, 1);
+          this.drawStar(g, center, center, 8, 8, 4);
+          g.fillStyle(0xffffff, 1);
+          g.fillCircle(center, center, 3);
+        },
+      },
+      // Skull (☠️)
+      {
+        icon: '☠️',
+        draw: (g) => {
+          g.fillStyle(0xffffff, 1);
+          g.fillCircle(center, center - 2, 10);
+          g.fillRect(center - 4, center + 6, 8, 6);
+          g.fillStyle(0x000000, 1);
+          g.fillCircle(center - 4, center - 2, 3);
+          g.fillCircle(center + 4, center - 2, 3);
+          g.fillTriangle(center - 2, center + 2, center + 2, center + 2, center, center + 5);
+        },
+      },
+      // Fire (🔥)
+      {
+        icon: '🔥',
+        draw: (g) => {
+          g.fillStyle(0xff4400, 1);
+          g.fillEllipse(center, center + 4, 14, 18);
+          g.fillStyle(0xffaa00, 1);
+          g.fillEllipse(center, center + 6, 10, 12);
+          g.fillStyle(0xffff00, 1);
+          g.fillEllipse(center, center + 8, 6, 8);
+        },
+      },
+      // Lightning (⚡)
+      {
+        icon: '⚡',
+        draw: (g) => {
+          g.fillStyle(0xffff00, 1);
+          g.fillTriangle(center - 6, 4, center + 6, 4, center - 2, 16);
+          g.fillTriangle(center - 4, 14, center + 8, 14, center, 28);
+          g.fillStyle(0xffffff, 0.6);
+          g.fillTriangle(center - 4, 6, center + 4, 6, center - 1, 14);
+        },
+      },
+      // Rainbow (🌈)
+      {
+        icon: '🌈',
+        draw: (g) => {
+          const colors = [0xff0000, 0xff8800, 0xffff00, 0x00ff00, 0x0088ff, 0x8800ff];
+          colors.forEach((color, i) => {
+            g.lineStyle(3, color, 1);
+            g.beginPath();
+            g.arc(center, center + 8, 12 - i * 2, Math.PI, 0, false);
+            g.strokePath();
+          });
+        },
+      },
+      // Timer (⏱️)
+      {
+        icon: '⏱️',
+        draw: (g) => {
+          g.fillStyle(0x888888, 1);
+          g.fillCircle(center, center + 2, 12);
+          g.fillStyle(0xffffff, 1);
+          g.fillCircle(center, center + 2, 10);
+          g.fillStyle(0x000000, 1);
+          g.fillRect(center - 1, center - 4, 2, 6);
+          g.fillRect(center - 1, center, 5, 2);
+          g.fillRect(center - 2, 2, 4, 4);
+        },
+      },
+      // Runner (🏃)
+      {
+        icon: '🏃',
+        draw: (g) => {
+          g.fillStyle(0x00ffff, 1);
+          g.fillCircle(center, 8, 5);
+          g.fillRect(center - 2, 12, 4, 10);
+          g.fillRect(center - 6, 14, 12, 3);
+          g.fillRect(center - 4, 22, 3, 6);
+          g.fillRect(center + 1, 22, 3, 6);
+        },
+      },
+      // Trophy (🏆)
+      {
+        icon: '🏆',
+        draw: (g) => {
+          g.fillStyle(0xffd700, 1);
+          g.fillRect(center - 6, 6, 12, 12);
+          g.fillRect(center - 8, 6, 4, 8);
+          g.fillRect(center + 4, 6, 4, 8);
+          g.fillRect(center - 2, 18, 4, 4);
+          g.fillRect(center - 5, 22, 10, 4);
+          g.fillStyle(0xffaa00, 0.5);
+          g.fillCircle(center, 12, 3);
+        },
+      },
+      // Shield (🛡️)
+      {
+        icon: '🛡️',
+        draw: (g) => {
+          g.fillStyle(0x4488ff, 1);
+          g.fillEllipse(center, center + 2, 16, 20);
+          g.fillRect(center - 8, 4, 16, 8);
+          g.fillStyle(0xffd700, 1);
+          g.fillCircle(center, center, 5);
+        },
+      },
+      // Battery (🔋)
+      {
+        icon: '🔋',
+        draw: (g) => {
+          g.fillStyle(0x444444, 1);
+          g.fillRect(6, 10, 20, 12);
+          g.fillRect(26, 13, 4, 6);
+          g.fillStyle(0x00ff00, 1);
+          g.fillRect(8, 12, 16, 8);
+        },
+      },
+      // Gift (🎁)
+      {
+        icon: '🎁',
+        draw: (g) => {
+          g.fillStyle(0xff00ff, 1);
+          g.fillRect(6, 12, 20, 14);
+          g.fillRect(8, 6, 16, 6);
+          g.fillStyle(0xffff00, 1);
+          g.fillRect(center - 2, 6, 4, 20);
+          g.fillRect(6, center, 20, 4);
+        },
+      },
+      // Scared face (😰)
+      {
+        icon: '😰',
+        draw: (g) => {
+          g.fillStyle(0xffdd00, 1);
+          g.fillCircle(center, center, 12);
+          g.fillStyle(0x000000, 1);
+          g.fillCircle(center - 4, center - 2, 2);
+          g.fillCircle(center + 4, center - 2, 2);
+          g.fillEllipse(center, center + 6, 6, 4);
+          g.fillStyle(0x00aaff, 1);
+          g.fillEllipse(center + 8, center, 3, 5);
+        },
+      },
+      // Skull face (💀)
+      {
+        icon: '💀',
+        draw: (g) => {
+          g.fillStyle(0xffffff, 1);
+          g.fillCircle(center, center - 2, 11);
+          g.fillRect(center - 5, center + 6, 10, 6);
+          g.fillStyle(0x000000, 1);
+          g.fillCircle(center - 4, center - 2, 4);
+          g.fillCircle(center + 4, center - 2, 4);
+          g.fillTriangle(center - 2, center + 3, center + 2, center + 3, center, center + 6);
+          g.fillRect(center - 4, center + 8, 2, 4);
+          g.fillRect(center - 1, center + 8, 2, 4);
+          g.fillRect(center + 2, center + 8, 2, 4);
+        },
+      },
+      // Peace symbol (☮️)
+      {
+        icon: '☮️',
+        draw: (g) => {
+          g.fillStyle(0xffffff, 1);
+          g.fillCircle(center, center, 12);
+          g.fillStyle(0x8800ff, 1);
+          g.fillCircle(center, center, 10);
+          g.fillStyle(0xffffff, 1);
+          g.fillRect(center - 1, center - 10, 2, 20);
+          g.fillTriangle(center, center, center - 7, center + 7, center, center + 10);
+          g.fillTriangle(center, center, center + 7, center + 7, center, center + 10);
+        },
+      },
+      // Gun (🔫)
+      {
+        icon: '🔫',
+        draw: (g) => {
+          g.fillStyle(0x444444, 1);
+          g.fillRect(6, 12, 16, 8);
+          g.fillRect(10, 18, 6, 8);
+          g.fillStyle(0xff00ff, 1);
+          g.fillRect(22, 14, 6, 4);
+        },
+      },
+      // Wind/Dash (💨)
+      {
+        icon: '💨',
+        draw: (g) => {
+          g.lineStyle(3, 0x88ccff, 1);
+          g.lineBetween(6, 10, 26, 10);
+          g.lineBetween(8, 16, 24, 16);
+          g.lineBetween(10, 22, 22, 22);
+          g.fillStyle(0x88ccff, 1);
+          g.fillCircle(26, 10, 3);
+          g.fillCircle(24, 16, 2);
+          g.fillCircle(22, 22, 2);
+        },
+      },
+      // Tornado (🌪️)
+      {
+        icon: '🌪️',
+        draw: (g) => {
+          g.fillStyle(0x88aacc, 1);
+          g.fillEllipse(center, 8, 16, 6);
+          g.fillEllipse(center, 14, 12, 5);
+          g.fillEllipse(center, 20, 8, 4);
+          g.fillEllipse(center, 25, 4, 3);
+          g.fillStyle(0xaaccee, 0.5);
+          g.fillEllipse(center - 2, 8, 6, 3);
+        },
+      },
+      // Masks (🎭)
+      {
+        icon: '🎭',
+        draw: (g) => {
+          // Happy mask
+          g.fillStyle(0xffffff, 1);
+          g.fillEllipse(10, center, 8, 10);
+          g.fillStyle(0x000000, 1);
+          g.fillCircle(8, center - 2, 2);
+          g.fillCircle(12, center - 2, 2);
+          g.beginPath();
+          g.arc(10, center + 2, 4, 0, Math.PI, false);
+          g.strokePath();
+          // Sad mask
+          g.fillStyle(0xffffff, 1);
+          g.fillEllipse(22, center, 8, 10);
+          g.fillStyle(0x000000, 1);
+          g.fillCircle(20, center - 2, 2);
+          g.fillCircle(24, center - 2, 2);
+          g.beginPath();
+          g.arc(22, center + 4, 4, Math.PI, 0, false);
+          g.strokePath();
+        },
+      },
+      // Volcano (🌋)
+      {
+        icon: '🌋',
+        draw: (g) => {
+          g.fillStyle(0x884422, 1);
+          g.fillTriangle(center, 6, 4, 28, 28, 28);
+          g.fillStyle(0xff4400, 1);
+          g.fillRect(center - 4, 4, 8, 8);
+          g.fillStyle(0xffaa00, 1);
+          g.fillCircle(center, 6, 4);
+          g.fillCircle(center - 3, 2, 2);
+          g.fillCircle(center + 3, 2, 2);
+        },
+      },
+      // Ghost (👻)
+      {
+        icon: '👻',
+        draw: (g) => {
+          g.fillStyle(0xffffff, 1);
+          g.fillCircle(center, 12, 10);
+          g.fillRect(center - 10, 12, 20, 14);
+          g.fillCircle(center - 6, 26, 4);
+          g.fillCircle(center + 6, 26, 4);
+          g.fillStyle(0x000000, 1);
+          g.fillCircle(center - 4, 12, 3);
+          g.fillCircle(center + 4, 12, 3);
+          g.fillEllipse(center, 18, 6, 3);
+        },
+      },
+    ];
+
+    // Generate each badge texture
+    badges.forEach(({ icon, draw }) => {
+      const graphics = this.make.graphics({ x: 0, y: 0 });
+      draw(graphics);
+      graphics.generateTexture(`badge_${icon}`, size, size);
+      graphics.destroy();
+    });
+
+    // Also create a default/unknown badge
+    const defaultBadge = this.make.graphics({ x: 0, y: 0 });
+    defaultBadge.fillStyle(0x444444, 1);
+    defaultBadge.fillCircle(center, center, 12);
+    defaultBadge.fillStyle(0xffffff, 1);
+    defaultBadge.fillRect(center - 2, center - 8, 4, 10);
+    defaultBadge.fillCircle(center, center + 6, 2);
+    defaultBadge.generateTexture('badge_default', size, size);
+    defaultBadge.destroy();
+  }
+
+  /** Helper to draw a star shape */
+  private drawStar(
+    graphics: Phaser.GameObjects.Graphics,
+    cx: number,
+    cy: number,
+    points: number,
+    outerRadius: number,
+    innerRadius: number
+  ): void {
+    const step = Math.PI / points;
+    graphics.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const radius = i % 2 === 0 ? outerRadius : innerRadius;
+      const angle = i * step - Math.PI / 2;
+      const x = cx + Math.cos(angle) * radius;
+      const y = cy + Math.sin(angle) * radius;
+      if (i === 0) {
+        graphics.moveTo(x, y);
+      } else {
+        graphics.lineTo(x, y);
+      }
+    }
+    graphics.closePath();
+    graphics.fillPath();
   }
 
   private createAnimations(): void {

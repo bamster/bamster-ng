@@ -169,15 +169,29 @@ export class AchievementsScene extends Phaser.Scene {
 
     container.add(bg);
 
-    // Icon
-    const icon = this.add.text(-itemWidth / 2 + 30, 0, isUnlocked ? achievement.icon : '?', {
-      fontSize: '28px',
-    });
-    icon.setOrigin(0.5);
-    if (!isUnlocked) {
-      icon.setAlpha(0.3);
+    // Icon - use badge texture if available, fallback to text
+    const badgeKey = `badge_${achievement.icon}`;
+    const hasBadge = this.textures.exists(badgeKey);
+
+    if (hasBadge) {
+      const icon = this.add.image(-itemWidth / 2 + 30, 0, isUnlocked ? badgeKey : 'badge_default');
+      icon.setScale(1.4);
+      if (!isUnlocked) {
+        icon.setAlpha(0.3);
+        icon.setTint(0x444444);
+      }
+      container.add(icon);
+    } else {
+      // Fallback to text emoji
+      const icon = this.add.text(-itemWidth / 2 + 30, 0, isUnlocked ? achievement.icon : '?', {
+        fontSize: '28px',
+      });
+      icon.setOrigin(0.5);
+      if (!isUnlocked) {
+        icon.setAlpha(0.3);
+      }
+      container.add(icon);
     }
-    container.add(icon);
 
     // Name
     const nameColor = isUnlocked ? '#00ffff' : '#555555';

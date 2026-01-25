@@ -99,12 +99,33 @@ export class AchievementPopup {
 
     this.container.add(bg);
 
-    // Achievement icon (large emoji on left)
-    const icon = this.scene.add.text(-halfWidth + 20, 0, achievement.icon, {
-      fontSize: '36px',
-    });
-    icon.setOrigin(0, 0.5);
-    this.container.add(icon);
+    // Achievement icon - use badge texture if available
+    const badgeKey = `badge_${achievement.icon}`;
+    const hasBadge = this.scene.textures.exists(badgeKey);
+
+    if (hasBadge) {
+      const icon = this.scene.add.image(-halfWidth + 30, 0, badgeKey);
+      icon.setScale(1.5);
+      this.container.add(icon);
+
+      // Add glow effect to badge
+      this.scene.tweens.add({
+        targets: icon,
+        scaleX: { from: 1.5, to: 1.7 },
+        scaleY: { from: 1.5, to: 1.7 },
+        duration: 500,
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1,
+      });
+    } else {
+      // Fallback to text emoji
+      const icon = this.scene.add.text(-halfWidth + 20, 0, achievement.icon, {
+        fontSize: '36px',
+      });
+      icon.setOrigin(0, 0.5);
+      this.container.add(icon);
+    }
 
     // "ACHIEVEMENT UNLOCKED" header
     const header = this.scene.add.text(-halfWidth + 70, -20, 'ACHIEVEMENT UNLOCKED', {

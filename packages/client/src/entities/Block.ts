@@ -125,6 +125,9 @@ export class Block extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(): void {
+    // Skip update if block is being destroyed
+    if (!this.active) return;
+
     // Keep HP indicator positioned on block
     this.updateHpIndicator();
 
@@ -138,9 +141,10 @@ export class Block extends Phaser.Physics.Arcade.Sprite {
   }
 
   destroyBlock(): void {
-    // Clean up HP text
+    // Clean up HP text first and clear reference
     if (this.hpText) {
       this.hpText.destroy();
+      this.hpText = undefined;
     }
 
     // Visual effect

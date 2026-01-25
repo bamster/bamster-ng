@@ -9,6 +9,7 @@ import {
   BAMSTER_JUMP_VELOCITY,
   GRAVITY,
   BAMSTER_STARTING_HEALTH,
+  MAX_HEALTH,
   MAX_COMBO_MULTIPLIER,
 } from '@bamster/shared';
 import type { BlockColor } from '@bamster/shared';
@@ -73,8 +74,6 @@ export class GameScene extends Phaser.Scene {
   private healthTexts: Phaser.GameObjects.Text[] = [];
   private heartContainers: Phaser.GameObjects.Container[] = [];
   private powerUpIndicators: Phaser.GameObjects.Container[] = [];
-  // Maximum hearts to display (always show 5 slots)
-  private static readonly MAX_HEART_DISPLAY = 5;
   private highScore: number = 0;
 
   // Combo system
@@ -1986,8 +1985,8 @@ export class GameScene extends Phaser.Scene {
 
       // Update health text (show extra lives beyond max display)
       if (this.healthTexts[index]) {
-        if (player.health > GameScene.MAX_HEART_DISPLAY) {
-          this.healthTexts[index].setText(`+${player.health - GameScene.MAX_HEART_DISPLAY}`);
+        if (player.health > MAX_HEALTH) {
+          this.healthTexts[index].setText(`+${player.health - MAX_HEALTH}`);
         } else {
           this.healthTexts[index].setText('');
         }
@@ -2002,8 +2001,8 @@ export class GameScene extends Phaser.Scene {
 
   private createHeartDisplay(container: Phaser.GameObjects.Container): void {
     const heartSpacing = 22;
-    // Always create MAX_HEART_DISPLAY hearts (5 slots)
-    for (let i = 0; i < GameScene.MAX_HEART_DISPLAY; i++) {
+    // Create heart slots based on MAX_HEALTH
+    for (let i = 0; i < MAX_HEALTH; i++) {
       const heart = this.add.sprite(i * heartSpacing, 0, 'heart_empty');
       heart.setName(`heart_${i}`);
       heart.setAlpha(0.5);
@@ -2013,7 +2012,7 @@ export class GameScene extends Phaser.Scene {
 
   private updateHeartDisplay(container: Phaser.GameObjects.Container, health: number): void {
     // Update hearts based on current health
-    for (let i = 0; i < GameScene.MAX_HEART_DISPLAY; i++) {
+    for (let i = 0; i < MAX_HEALTH; i++) {
       const heart = container.getByName(`heart_${i}`) as Phaser.GameObjects.Sprite;
       if (heart) {
         if (i < health) {

@@ -44,8 +44,13 @@ export class AchievementManager {
    * @param achievement The achievement to register
    */
   registerAchievement(achievement: Omit<Achievement, 'unlockedAt'>): void {
-    // Don't overwrite if already registered (preserves unlock state)
-    if (this.achievements.has(achievement.id)) {
+    const existing = this.achievements.get(achievement.id);
+
+    if (existing) {
+      // Update with full data while preserving unlock state
+      existing.name = achievement.name;
+      existing.description = achievement.description;
+      existing.icon = achievement.icon;
       return;
     }
 

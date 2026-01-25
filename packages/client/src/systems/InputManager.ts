@@ -19,12 +19,20 @@ export class InputManager {
   private p1Jump!: Phaser.Input.Keyboard.Key;
   private p1Shoot!: Phaser.Input.Keyboard.Key;
 
-  // WASD as alternate player 1 keys (always enabled)
+  // WASD as alternate player 1 keys (enabled unless conflicting with P2)
   private wasd!: {
     W: Phaser.Input.Keyboard.Key;
     A: Phaser.Input.Keyboard.Key;
     S: Phaser.Input.Keyboard.Key;
     D: Phaser.Input.Keyboard.Key;
+  };
+
+  // Track which WASD keys are disabled due to P2 conflicts
+  private wasdDisabled: { W: boolean; A: boolean; S: boolean; D: boolean } = {
+    W: false,
+    A: false,
+    S: false,
+    D: false,
   };
 
   // Player 2 keys (configurable)
@@ -93,12 +101,21 @@ export class InputManager {
     this.p1Jump = keyboard.addKey(this.getKeyCode(this.bindings.player1.jump));
     this.p1Shoot = keyboard.addKey(this.getKeyCode(this.bindings.player1.shoot));
 
-    // WASD as alternate keys (always available)
+    // WASD as alternate keys (available unless conflicting with P2 bindings)
     this.wasd = {
       W: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
       A: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
       S: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
       D: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+    };
+
+    // Check for WASD conflicts with Player 2 bindings
+    const p2Keys = Object.values(this.bindings.player2);
+    this.wasdDisabled = {
+      W: p2Keys.includes('W'),
+      A: p2Keys.includes('A'),
+      S: p2Keys.includes('S'),
+      D: p2Keys.includes('D'),
     };
 
     // Player 2 configurable keys
@@ -275,18 +292,20 @@ export class InputManager {
     // Reset jump just pressed flag after reading
     this.jumpJustPressed = false;
 
-    // Base input states
-    const leftInput = this.p1Left.isDown || this.wasd.A.isDown || touchLeft;
-    const rightInput = this.p1Right.isDown || this.wasd.D.isDown || touchRight;
+    // Base input states (WASD only if not conflicting with P2)
+    const wasdLeft = !this.wasdDisabled.A && this.wasd.A.isDown;
+    const wasdRight = !this.wasdDisabled.D && this.wasd.D.isDown;
+    const leftInput = this.p1Left.isDown || wasdLeft || touchLeft;
+    const rightInput = this.p1Right.isDown || wasdRight || touchRight;
+
+    // WASD jump only if not conflicting with P2
+    const wasdJump = !this.wasdDisabled.W && Phaser.Input.Keyboard.JustDown(this.wasd.W);
 
     // Apply mirror mode (swap left/right)
     return {
       left: this.mirrorMode ? rightInput : leftInput,
       right: this.mirrorMode ? leftInput : rightInput,
-      jump:
-        Phaser.Input.Keyboard.JustDown(this.p1Jump) ||
-        Phaser.Input.Keyboard.JustDown(this.wasd.W) ||
-        touchJump,
+      jump: Phaser.Input.Keyboard.JustDown(this.p1Jump) || wasdJump || touchJump,
       shoot: this.p1Shoot.isDown || this.isMouseDown || touchShoot,
     };
   }
@@ -307,10 +326,8 @@ export class InputManager {
 
   isJumpJustPressed(playerId: 'player1' | 'player2'): boolean {
     if (playerId === 'player1') {
-      return (
-        Phaser.Input.Keyboard.JustDown(this.p1Jump) ||
-        Phaser.Input.Keyboard.JustDown(this.wasd.W)
-      );
+      const wasdJump = !this.wasdDisabled.W && Phaser.Input.Keyboard.JustDown(this.wasd.W);
+      return Phaser.Input.Keyboard.JustDown(this.p1Jump) || wasdJump;
     } else {
       return Phaser.Input.Keyboard.JustDown(this.p2Jump);
     }
@@ -319,6 +336,14 @@ export class InputManager {
   // Reload bindings (call after settings change)
   reloadBindings(): void {
     this.bindings = loadKeyBindings();
+    // Update WASD conflict detection
+    const p2Keys = Object.values(this.bindings.player2);
+    this.wasdDisabled = {
+      W: p2Keys.includes('W'),
+      A: p2Keys.includes('A'),
+      S: p2Keys.includes('S'),
+      D: p2Keys.includes('D'),
+    };
     // Note: Keys would need to be re-added, but that requires scene restart
     // For now, bindings take effect on next scene start
   }

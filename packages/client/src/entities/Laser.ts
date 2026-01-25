@@ -6,6 +6,9 @@ export class Laser extends Phaser.Physics.Arcade.Sprite {
   public ownerId: string;
   public isPiercing: boolean;
   public hitBlocks: Set<string> = new Set();
+  public bouncing: boolean = false;
+  public bounceCount: number = 0;
+  public maxBounces: number = 3;
 
   private static idCounter = 0;
   private velocityX: number;
@@ -66,7 +69,34 @@ export class Laser extends Phaser.Physics.Arcade.Sprite {
     const minY = FRAME_WIDTH;
     const maxY = GAME_HEIGHT - FRAME_WIDTH;
 
-    if (this.x < minX || this.x > maxX || this.y < minY || this.y > maxY) {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+
+    // Handle bouncing off side walls
+    if (this.bouncing && this.bounceCount < this.maxBounces) {
+      if (this.x <= minX || this.x >= maxX) {
+        // Bounce off wall - reverse X velocity
+        this.velocityX = -this.velocityX;
+        body.setVelocityX(this.velocityX);
+
+        // Keep inside bounds
+        this.x = this.x <= minX ? minX + 1 : maxX - 1;
+
+        // Update sprite rotation to match new direction
+        this.setRotation(Math.atan2(this.velocityY, this.velocityX));
+        this.setFlipX(this.velocityX < 0);
+
+        this.bounceCount++;
+        return;
+      }
+    }
+
+    // Destroy if outside bounds (top/bottom always, left/right if not bouncing)
+    if (this.y < minY || this.y > maxY) {
+      this.destroy();
+      return;
+    }
+
+    if (this.x < minX || this.x > maxX) {
       this.destroy();
     }
   }

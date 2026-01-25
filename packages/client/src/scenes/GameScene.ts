@@ -2370,6 +2370,40 @@ export class GameScene extends Phaser.Scene {
         this.endLightsOut();
       },
     });
+
+    // Laser Frenzy event - lasers bounce off walls
+    this.eventManager.registerEvent({
+      id: 'laser_frenzy',
+      name: 'LASER FRENZY',
+      icon: '💥',
+      duration: 20000, // 20 seconds
+      onStart: (_scene) => {
+        // Enable bouncing for existing lasers
+        this.laserGroup.children.each((child) => {
+          const laser = child as Laser;
+          laser.bouncing = true;
+          return true;
+        });
+      },
+      onEnd: (_scene) => {
+        // Disable bouncing for existing lasers
+        this.laserGroup.children.each((child) => {
+          const laser = child as Laser;
+          laser.bouncing = false;
+          return true;
+        });
+      },
+      onUpdate: (_scene, _delta) => {
+        // Enable bouncing for any newly spawned lasers
+        this.laserGroup.children.each((child) => {
+          const laser = child as Laser;
+          if (!laser.bouncing) {
+            laser.bouncing = true;
+          }
+          return true;
+        });
+      },
+    });
   }
 
   /**

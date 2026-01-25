@@ -296,6 +296,24 @@ export class GameScene extends Phaser.Scene {
     // Setup debug mode toggle (F3)
     this.input.keyboard?.on('keydown-F3', () => this.toggleDebugMode());
 
+    // Debug: Force trigger Floor is Lava event (F4)
+    this.input.keyboard?.on('keydown-F4', () => {
+      if (isDebugMode() && this.eventManager) {
+        this.eventManager.forceStartEvent('floor_is_lava');
+      }
+    });
+
+    // Debug: Force trigger random event (F5)
+    this.input.keyboard?.on('keydown-F5', () => {
+      if (isDebugMode() && this.eventManager) {
+        const events = this.eventManager.getRegisteredEvents();
+        const randomEvent = events[Math.floor(Math.random() * events.length)];
+        if (randomEvent) {
+          this.eventManager.forceStartEvent(randomEvent.id);
+        }
+      }
+    });
+
     // Create debug indicator (hidden by default, shown if debug mode active)
     this.createDebugIndicator();
 
@@ -2131,6 +2149,14 @@ export class GameScene extends Phaser.Scene {
       localStorage.setItem('bamster_highscore', this.highScore.toString());
     }
 
+    // End game stats session and trigger final achievements
+    getGameStats().endSession(maxScore);
+
+    // Clean up achievement popup
+    if (this.achievementPopup) {
+      this.achievementPopup.destroy();
+    }
+
     this.scene.start('GameOverScene', {
       mode: this.mode,
       scores,
@@ -2316,12 +2342,39 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Helper to register event with achievement tracking
+   */
+  private registerEventWithTracking(event: import('../systems/EventManager').GameEvent): void {
+    const originalOnStart = event.onStart;
+    const originalOnEnd = event.onEnd;
+    let damageBefore = 0;
+
+    this.eventManager.registerEvent({
+      ...event,
+      onStart: (scene) => {
+        // Track event start for achievements
+        getGameStats().recordEventStarted(event.id);
+        // Record damage at event start to check if player took damage during event
+        damageBefore = getGameStats().getSessionStats().damageTaken;
+        originalOnStart(scene);
+      },
+      onEnd: (scene) => {
+        // Track event completion for achievements
+        const currentDamage = getGameStats().getSessionStats().damageTaken;
+        const tookDamage = currentDamage > damageBefore;
+        getGameStats().recordEventCompleted(event.id, tookDamage);
+        originalOnEnd(scene);
+      },
+    });
+  }
+
+  /**
    * Register available game events
    * Each event has: id, name, icon, duration, onStart, onEnd, (optional) onUpdate
    */
   private registerGameEvents(): void {
     // Double Points event - 2x score multiplier
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'double_points',
       name: 'DOUBLE POINTS',
       icon: '2X',
@@ -2336,7 +2389,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Freeze Frame event - blocks pause mid-air
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'freeze_frame',
       name: 'FREEZE FRAME',
       icon: '❄️',
@@ -2372,7 +2425,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Power-Up Shower event - only power-ups spawn
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'powerup_shower',
       name: 'POWER-UP SHOWER',
       icon: '🎁',
@@ -2388,7 +2441,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Mirror Mode event - controls are reversed
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'mirror_mode',
       name: 'MIRROR MODE',
       icon: '🪞',
@@ -2404,7 +2457,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Block Rain event - blocks fall 2.5x faster
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'block_rain',
       name: 'BLOCK RAIN',
       icon: '⚡',
@@ -2420,7 +2473,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Unlimited Ammo event - rapid fire with no cooldown
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'unlimited_ammo',
       name: 'UNLIMITED AMMO',
       icon: '🔫',
@@ -2440,7 +2493,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Shrink Ray event - play area narrows
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'shrink_ray',
       name: 'SHRINK RAY',
       icon: '📐',
@@ -2457,7 +2510,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Rainbow Rush event - all blocks same color
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'rainbow_rush',
       name: 'RAINBOW RUSH',
       icon: '🌈',
@@ -2475,7 +2528,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Super Bamster event - invincibility + double jump
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'super_bamster',
       name: 'SUPER BAMster',
       icon: '⭐',
@@ -2503,7 +2556,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Lights Out event - screen goes dark
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'lights_out',
       name: 'LIGHTS OUT',
       icon: '🌑',
@@ -2517,7 +2570,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Laser Frenzy event - lasers bounce off walls
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'laser_frenzy',
       name: 'LASER FRENZY',
       icon: '💥',
@@ -2551,7 +2604,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Gravity Flip event - blocks fall upward
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'gravity_flip',
       name: 'GRAVITY FLIP',
       icon: '🔄',
@@ -2575,7 +2628,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Ghost Blocks event - blocks pass through each other
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'ghost_blocks',
       name: 'GHOST BLOCKS',
       icon: '👻',
@@ -2613,7 +2666,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Earthquake event - screen shakes, blocks can topple
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'earthquake',
       name: 'EARTHQUAKE',
       icon: '🌋',
@@ -2631,7 +2684,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Giant Block event - spawns a massive block cluster
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'giant_block',
       name: 'GIANT BLOCK',
       icon: '🟫',
@@ -2645,7 +2698,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Floor is Lava event - floor becomes dangerous
-    this.eventManager.registerEvent({
+    this.registerEventWithTracking({
       id: 'floor_is_lava',
       name: 'FLOOR IS LAVA',
       icon: '🌋',

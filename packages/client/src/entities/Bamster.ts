@@ -155,8 +155,9 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
 
   collectCorn(): void {
     this.health += 1;
-    // Visual feedback - grow slightly
-    this.setScale(1 + (this.health - 1) * 0.1);
+    // Visual feedback - grow slightly (capped at 1.15x to avoid becoming too large)
+    const scaleBonus = Math.min((this.health - 1) * 0.03, 0.15);
+    this.setScale(1 + scaleBonus);
   }
 
   collectSneakers(): void {
@@ -167,12 +168,11 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
 
     this.jumpPower = SNEAKERS_JUMP_MULTIPLIER;
 
-    // Add visual indicator
-    this.setTint(0x88ffff);
+    // Brief flash effect instead of persistent tint (preserves color vibrancy)
+    this.flashEffect(0x88ffff);
 
     this.sneakersTimer = this.scene.time.delayedCall(POWERUP_DURATION, () => {
       this.jumpPower = 1;
-      this.clearTint();
       this.sneakersTimer = undefined;
     });
   }
@@ -238,8 +238,9 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
       return true;
     }
 
-    // Visual feedback
-    this.setScale(1 + (this.health - 1) * 0.1);
+    // Visual feedback - shrink slightly (capped at 1.15x to avoid becoming too large)
+    const scaleBonus = Math.min((this.health - 1) * 0.03, 0.15);
+    this.setScale(1 + scaleBonus);
     this.scene.tweens.add({
       targets: this,
       alpha: 0.5,

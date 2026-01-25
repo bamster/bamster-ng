@@ -134,6 +134,12 @@ export class GameScene extends Phaser.Scene {
   // Earthquake event state
   private earthquakeTimer?: Phaser.Time.TimerEvent;
 
+  // Floor is Lava event state
+  private floorIsLavaActive: boolean = false;
+  private lavaGraphics?: Phaser.GameObjects.Graphics;
+  private lavaDamageTimer?: Phaser.Time.TimerEvent;
+  private lavaParticleEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
+
   // Debug mode UI
   private debugLabel?: Phaser.GameObjects.Text;
 
@@ -2556,6 +2562,23 @@ export class GameScene extends Phaser.Scene {
         // Nothing to clean up
       },
     });
+
+    // Floor is Lava event - floor becomes dangerous
+    this.eventManager.registerEvent({
+      id: 'floor_is_lava',
+      name: 'FLOOR IS LAVA',
+      icon: '🌋',
+      duration: 20000, // 20 seconds
+      onStart: (_scene) => {
+        this.startFloorIsLava();
+      },
+      onEnd: (_scene) => {
+        this.endFloorIsLava();
+      },
+      onUpdate: (_scene, delta) => {
+        this.updateFloorIsLava(delta);
+      },
+    });
   }
 
   /**
@@ -2944,5 +2967,173 @@ export class GameScene extends Phaser.Scene {
 
     // Play sound
     getSound().play('powerup');
+  }
+
+  /**
+   * Start Floor is Lava event - floor becomes dangerous
+   */
+  private startFloorIsLava(): void {
+    this.floorIsLavaActive = true;
+
+    // Create lava visual graphics
+    if (!this.lavaGraphics) {
+      this.lavaGraphics = this.add.graphics();
+      this.lavaGraphics.setDepth(5); // Below blocks but above background
+    }
+
+    // Create particle emitter for lava bubbles/sparks
+    this.lavaParticleEmitter = this.add.particles(0, 0, 'particle', {
+      x: { min: FRAME_WIDTH, max: PLAY_AREA_WIDTH - FRAME_WIDTH },
+      y: GAME_HEIGHT - BLOCK_SIZE / 2,
+      lifespan: 600,
+      speed: { min: 30, max: 80 },
+      angle: { min: 250, max: 290 }, // Upward
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 1, end: 0 },
+      tint: [0xff4400, 0xff6600, 0xffaa00, 0xff0000],
+      frequency: 80,
+      emitting: true,
+    });
+    this.lavaParticleEmitter.setDepth(6);
+
+    // Start damage timer - checks every 500ms for blocks/players on floor
+    this.lavaDamageTimer = this.time.addEvent({
+      delay: 500,
+      callback: () => this.applyLavaDamage(),
+      loop: true,
+    });
+
+    // Play warning sound
+    getSound().play('damage');
+
+    // Flash warning
+    this.cameras.main.flash(200, 255, 100, 0);
+  }
+
+  /**
+   * End Floor is Lava event - restore normal floor
+   */
+  private endFloorIsLava(): void {
+    this.floorIsLavaActive = false;
+
+    // Clean up lava graphics with fade out
+    if (this.lavaGraphics) {
+      this.tweens.add({
+        targets: this.lavaGraphics,
+        alpha: 0,
+        duration: 500,
+        onComplete: () => {
+          this.lavaGraphics?.destroy();
+          this.lavaGraphics = undefined;
+        },
+      });
+    }
+
+    // Stop particle emitter
+    if (this.lavaParticleEmitter) {
+      this.lavaParticleEmitter.stop();
+      this.time.delayedCall(600, () => {
+        this.lavaParticleEmitter?.destroy();
+        this.lavaParticleEmitter = undefined;
+      });
+    }
+
+    // Stop damage timer
+    if (this.lavaDamageTimer) {
+      this.lavaDamageTimer.destroy();
+      this.lavaDamageTimer = undefined;
+    }
+  }
+
+  /**
+   * Update Floor is Lava visual effect each frame
+   */
+  private updateFloorIsLava(_delta: number): void {
+    if (!this.floorIsLavaActive || !this.lavaGraphics) return;
+
+    this.lavaGraphics.clear();
+
+    // Animated lava floor
+    const time = this.time.now / 200;
+    const floorY = GAME_HEIGHT - BLOCK_SIZE;
+    const floorHeight = BLOCK_SIZE;
+
+    // Draw base lava color with gradient
+    for (let i = 0; i < floorHeight; i++) {
+      const gradientAlpha = 0.6 + (i / floorHeight) * 0.3;
+      const r = 255;
+      const g = Math.floor(50 + Math.sin(time + i * 0.1) * 30);
+      const b = 0;
+      const color = (r << 16) | (g << 8) | b;
+      this.lavaGraphics.fillStyle(color, gradientAlpha);
+      this.lavaGraphics.fillRect(FRAME_WIDTH, floorY + i, PLAY_AREA_WIDTH - FRAME_WIDTH * 2, 1);
+    }
+
+    // Add animated "bubbles" (circles)
+    this.lavaGraphics.fillStyle(0xffaa00, 0.8);
+    for (let i = 0; i < 5; i++) {
+      const bubbleX = FRAME_WIDTH + 50 + Math.sin(time + i * 2) * 30 + i * 100;
+      const bubbleY = floorY + 10 + Math.sin(time * 1.5 + i) * 5;
+      const bubbleSize = 5 + Math.sin(time * 2 + i) * 2;
+      this.lavaGraphics.fillCircle(bubbleX, bubbleY, bubbleSize);
+    }
+
+    // Glowing top edge
+    this.lavaGraphics.lineStyle(3, 0xffff00, 0.8 + Math.sin(time * 3) * 0.2);
+    this.lavaGraphics.lineBetween(FRAME_WIDTH, floorY, PLAY_AREA_WIDTH - FRAME_WIDTH, floorY);
+  }
+
+  /**
+   * Apply lava damage to blocks and players touching the floor
+   */
+  private applyLavaDamage(): void {
+    if (!this.floorIsLavaActive) return;
+
+    const floorY = GAME_HEIGHT - BLOCK_SIZE;
+
+    // Damage blocks on the floor
+    const blocksToDestroy: Block[] = [];
+    this.blockGroup.children.each((child) => {
+      const block = child as Block;
+      if (block.active && block.isResting) {
+        // Check if block is touching the floor (bottom row)
+        if (block.y >= floorY - BLOCK_SIZE / 2) {
+          blocksToDestroy.push(block);
+        }
+      }
+      return true;
+    });
+
+    // Destroy floor-level blocks with melting effect
+    blocksToDestroy.forEach((block) => {
+      // Visual melt effect
+      this.tweens.add({
+        targets: block,
+        scaleY: 0.3,
+        alpha: 0,
+        tint: 0xff4400,
+        duration: 300,
+        ease: 'Quad.easeIn',
+        onComplete: () => {
+          block.destroy();
+        },
+      });
+    });
+
+    // Damage players touching the floor
+    this.players.forEach((player) => {
+      if (player.isAlive && !player.isDying) {
+        const body = player.body as Phaser.Physics.Arcade.Body;
+        // Check if player is on the floor
+        if (body.blocked.down || body.touching.down) {
+          if (player.y >= floorY - 30) {
+            player.takeDamage();
+            // Visual feedback - flash red
+            player.setTint(0xff0000);
+            this.time.delayedCall(100, () => player.clearTint());
+          }
+        }
+      }
+    });
   }
 }

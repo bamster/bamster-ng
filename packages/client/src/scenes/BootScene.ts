@@ -465,6 +465,39 @@ export class BootScene extends Phaser.Scene {
     piercingGraphics.strokeCircle(18, center, 4);
     piercingGraphics.generateTexture('powerup_piercing', size, size);
     piercingGraphics.destroy();
+
+    // Bomb power-up (row clear) - neon red/orange
+    const bombGraphics = this.make.graphics({ x: 0, y: 0 });
+    // Outer glow
+    bombGraphics.fillStyle(0xff4400, 0.3);
+    bombGraphics.fillCircle(center, center + 2, 14);
+    // Bomb body (dark sphere)
+    bombGraphics.fillStyle(0x222222, 1);
+    bombGraphics.fillCircle(center, center + 2, 11);
+    // Neon red highlights
+    bombGraphics.fillStyle(0xff2200, 1);
+    bombGraphics.fillCircle(center - 3, center, 3);
+    // Fuse at top
+    bombGraphics.lineStyle(3, 0x886644, 1);
+    bombGraphics.lineBetween(center, center - 9, center + 4, center - 14);
+    // Lit fuse spark (neon yellow/orange)
+    bombGraphics.fillStyle(0xffff00, 1);
+    bombGraphics.fillCircle(center + 4, center - 14, 4);
+    bombGraphics.fillStyle(0xff8800, 1);
+    bombGraphics.fillCircle(center + 4, center - 14, 2);
+    // Small sparks
+    bombGraphics.fillStyle(0xffff00, 0.8);
+    bombGraphics.fillCircle(center + 7, center - 16, 2);
+    bombGraphics.fillCircle(center + 2, center - 17, 1.5);
+    // Skull icon on bomb
+    bombGraphics.fillStyle(0xff4400, 1);
+    bombGraphics.fillCircle(center, center + 2, 5);
+    bombGraphics.fillStyle(0x000000, 1);
+    bombGraphics.fillCircle(center - 2, center + 1, 1.5);
+    bombGraphics.fillCircle(center + 2, center + 1, 1.5);
+    bombGraphics.fillRect(center - 2, center + 4, 4, 2);
+    bombGraphics.generateTexture('powerup_bomb', size, size);
+    bombGraphics.destroy();
   }
 
   private generateParticleTexture(): void {

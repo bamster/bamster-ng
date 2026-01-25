@@ -1587,6 +1587,9 @@ export class GameScene extends Phaser.Scene {
       case 'piercing':
         player.collectWeapon(powerUp.powerUpType);
         break;
+      case 'bomb':
+        this.handleBombPowerUp(player);
+        break;
     }
 
     // Play power-up sound
@@ -1625,6 +1628,7 @@ export class GameScene extends Phaser.Scene {
       rapid: 'RAPID FIRE!',
       spread: 'SPREAD SHOT!',
       piercing: 'PIERCING!',
+      bomb: 'ROW CLEAR!',
     };
 
     const text = this.add.text(x, y, names[type] || type, {
@@ -1643,6 +1647,28 @@ export class GameScene extends Phaser.Scene {
       duration: 1000,
       onComplete: () => text.destroy(),
     });
+  }
+
+  private handleBombPowerUp(player: Bamster): void {
+    // Destroy bottom row of blocks
+    const { count, score, blocks } = this.blockSpawner.destroyBottomRow();
+
+    if (count > 0) {
+      // Play explosion sound
+      getSound().play('explosion');
+
+      // Create particle effects for each destroyed block
+      blocks.forEach((block) => {
+        this.createBlockExplosion(block.x, block.y, block.color);
+      });
+
+      // Camera shake for big effect
+      this.cameras.main.shake(200, 0.015);
+
+      // Award points to player
+      player.addScore(score);
+      this.showScorePopup(PLAY_AREA_WIDTH / 2, GAME_HEIGHT - 100, score);
+    }
   }
 
   private createUI(): void {

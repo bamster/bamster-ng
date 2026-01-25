@@ -2,7 +2,7 @@ import { BLOCK_COLORS } from './constants';
 
 export type BlockColor = (typeof BLOCK_COLORS)[number];
 
-export type PowerUpType = 'corn' | 'sneakers' | 'rapid' | 'spread' | 'piercing';
+export type PowerUpType = 'corn' | 'sneakers' | 'rapid' | 'spread' | 'piercing' | 'bomb';
 
 export type WeaponType = 'basic' | 'rapid' | 'spread' | 'piercing';
 

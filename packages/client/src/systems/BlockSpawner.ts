@@ -237,6 +237,7 @@ export class BlockSpawner {
       'rapid',
       'spread',
       'piercing',
+      'bomb',
     ];
     const type = types[Phaser.Math.Between(0, types.length - 1)];
     const powerUp = new PowerUp(this.scene, x, y, type);
@@ -441,5 +442,48 @@ export class BlockSpawner {
 
   getPowerUps(): PowerUp[] {
     return this.powerUpGroup.children.getArray() as PowerUp[];
+  }
+
+  // Destroy all blocks in the bottom-most row (for bomb power-up)
+  destroyBottomRow(): { count: number; score: number; blocks: Block[] } {
+    const restingBlocks = this.blockGroup.children
+      .getArray()
+      .filter((b) => (b as Block).isResting && b.active) as Block[];
+
+    if (restingBlocks.length === 0) {
+      return { count: 0, score: 0, blocks: [] };
+    }
+
+    // Find the bottom-most Y position (highest Y value)
+    const bottomY = Math.max(...restingBlocks.map((b) => b.y));
+
+    // Find all blocks at or near the bottom Y (within half a block size)
+    const bottomRowBlocks = restingBlocks.filter(
+      (b) => Math.abs(b.y - bottomY) < BLOCK_SIZE * 0.5
+    );
+
+    // Calculate score (similar to destroyCluster)
+    const count = bottomRowBlocks.length;
+    const baseScore = count * SCORE_PER_BLOCK;
+    const comboBonus = count > 1 ? Math.floor(baseScore * (COMBO_MULTIPLIER - 1) * count) : 0;
+    const totalScore = baseScore + comboBonus;
+
+    // Clean up cluster HP for affected clusters
+    const affectedClusterIds = new Set(bottomRowBlocks.map((b) => b.clusterId));
+    affectedClusterIds.forEach((clusterId) => {
+      this.clusterHp.delete(clusterId);
+    });
+
+    // Destroy the blocks
+    bottomRowBlocks.forEach((block) => {
+      block.destroyBlock();
+    });
+
+    // After a delay, check for unsupported blocks
+    this.scene.time.delayedCall(200, () => {
+      this.dropUnsupportedBlocks();
+    });
+
+    return { count, score: totalScore, blocks: bottomRowBlocks };
   }
 }

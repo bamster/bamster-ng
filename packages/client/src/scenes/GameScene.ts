@@ -1418,13 +1418,20 @@ export class GameScene extends Phaser.Scene {
     const fallingBlock = block1.isResting ? block2 : block1;
     const restingBlock = block1.isResting ? block1 : block2;
 
-    // Only collide if falling block is above and moving down onto resting block
     // Check they're in the same column (within tolerance)
     const dx = Math.abs(fallingBlock.x - restingBlock.x);
     if (dx > BLOCK_SIZE * 0.8) return false;
 
-    // Falling block must be above the resting block
-    return fallingBlock.y < restingBlock.y;
+    // Check relative position based on gravity direction
+    const gravityFlipped = this.blockSpawner.isGravityFlipped();
+
+    if (gravityFlipped) {
+      // Falling block must be BELOW the resting block (falling upward)
+      return fallingBlock.y > restingBlock.y;
+    } else {
+      // Falling block must be ABOVE the resting block (falling downward)
+      return fallingBlock.y < restingBlock.y;
+    }
   }
 
   private handleBlockBlockCollision(block1: Block, block2: Block): void {
@@ -2399,6 +2406,30 @@ export class GameScene extends Phaser.Scene {
           const laser = child as Laser;
           if (!laser.bouncing) {
             laser.bouncing = true;
+          }
+          return true;
+        });
+      },
+    });
+
+    // Gravity Flip event - blocks fall upward
+    this.eventManager.registerEvent({
+      id: 'gravity_flip',
+      name: 'GRAVITY FLIP',
+      icon: '🔄',
+      duration: 25000, // 25 seconds
+      onStart: (_scene) => {
+        this.blockSpawner.setGravityFlipped(true);
+      },
+      onEnd: (_scene) => {
+        this.blockSpawner.setGravityFlipped(false);
+      },
+      onUpdate: (_scene, _delta) => {
+        // Check for blocks that need to land on ceiling
+        this.blockGroup.children.each((child) => {
+          const block = child as Block;
+          if (!block.isResting && block.y <= FRAME_WIDTH + BLOCK_SIZE / 2) {
+            this.blockSpawner.landBlockOnCeiling(block);
           }
           return true;
         });

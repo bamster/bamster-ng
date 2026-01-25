@@ -52,6 +52,7 @@ export class BlockSpawner {
   private powerUpOnlyMode: boolean = false;
   private fallSpeedMultiplier: number = 1.0;
   private fixedBlockColor: BlockColor | null = null; // For Rainbow Rush event
+  private gravityFlipped: boolean = false; // For Gravity Flip event
 
   constructor(
     scene: Phaser.Scene,
@@ -113,9 +114,28 @@ export class BlockSpawner {
     });
   }
 
-  // Get effective fall speed (base speed * multiplier)
+  // Get effective fall speed (base speed * multiplier * gravity direction)
   private getEffectiveFallSpeed(): number {
-    return this.currentFallSpeed * this.fallSpeedMultiplier;
+    const gravityMultiplier = this.gravityFlipped ? -1 : 1;
+    return this.currentFallSpeed * this.fallSpeedMultiplier * gravityMultiplier;
+  }
+
+  // Set gravity flip mode (for Gravity Flip event)
+  setGravityFlipped(flipped: boolean): void {
+    this.gravityFlipped = flipped;
+    // Update existing falling blocks to reverse direction
+    this.blockGroup.children.each((block) => {
+      const b = block as Block;
+      if (!b.isResting) {
+        b.setFallSpeed(this.getEffectiveFallSpeed());
+      }
+      return true;
+    });
+  }
+
+  // Check if gravity is flipped
+  isGravityFlipped(): boolean {
+    return this.gravityFlipped;
   }
 
   // Get cluster HP
@@ -209,7 +229,8 @@ export class BlockSpawner {
     const gridColumns = Math.floor(usableWidth / BLOCK_SIZE);
     const column = Phaser.Math.Between(0, gridColumns - 1);
     const x = FRAME_WIDTH + column * BLOCK_SIZE + BLOCK_SIZE / 2;
-    const y = -BLOCK_SIZE;
+    // Spawn from top normally, from bottom when gravity is flipped
+    const y = this.gravityFlipped ? GAME_HEIGHT + BLOCK_SIZE : -BLOCK_SIZE;
 
     // Determine if we should spawn a power-up
     let shouldSpawnPowerUp = false;
@@ -329,8 +350,12 @@ export class BlockSpawner {
   ): void {
     if (block.isResting) return;
 
-    // Calculate target Y position: directly on top of the block we collided with
-    const targetY = collidedWith.y - BLOCK_SIZE;
+    // Calculate target Y position based on gravity direction
+    // Normal: land on TOP of the collided block (above it)
+    // Flipped: land on BOTTOM of the collided block (below it)
+    const targetY = this.gravityFlipped
+      ? collidedWith.y + BLOCK_SIZE
+      : collidedWith.y - BLOCK_SIZE;
 
     // Land the block at the calculated position
     block.land(targetY);
@@ -345,6 +370,16 @@ export class BlockSpawner {
     // Land on top of the ground (ground is at GAME_HEIGHT - BLOCK_SIZE/2)
     // Block center should be one BLOCK_SIZE above ground center
     const targetY = GAME_HEIGHT - BLOCK_SIZE - BLOCK_SIZE / 2;
+    block.land(targetY);
+    this.tryMergeBlocks(block);
+  }
+
+  landBlockOnCeiling(block: Block): void {
+    if (block.isResting) return;
+
+    // Land on bottom of the ceiling (ceiling is at FRAME_WIDTH)
+    // Block center should be one BLOCK_SIZE below frame
+    const targetY = FRAME_WIDTH + BLOCK_SIZE / 2;
     block.land(targetY);
     this.tryMergeBlocks(block);
   }

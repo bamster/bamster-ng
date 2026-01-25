@@ -37,6 +37,10 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   private weaponTimer?: Phaser.Time.TimerEvent;
   private texturePrefix: string = 'bamster';
 
+  // Power-up visual effect emitters
+  private sneakersEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
+  private weaponEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
+
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -171,8 +175,12 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     // Brief flash effect instead of persistent tint (preserves color vibrancy)
     this.flashEffect(0x88ffff);
 
+    // Create sneakers particle trail at feet (cyan speed lines)
+    this.createSneakersEffect();
+
     this.sneakersTimer = this.scene.time.delayedCall(POWERUP_DURATION, () => {
       this.jumpPower = 1;
+      this.destroySneakersEffect();
       this.sneakersTimer = undefined;
     });
   }
@@ -193,8 +201,12 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     };
     this.flashEffect(flashColors[type]);
 
+    // Create weapon glow effect around gun
+    this.createWeaponEffect(type);
+
     this.weaponTimer = this.scene.time.delayedCall(POWERUP_DURATION, () => {
       this.weaponType = 'basic';
+      this.destroyWeaponEffect();
       this.weaponTimer = undefined;
     });
   }
@@ -266,6 +278,10 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
       this.weaponTimer.destroy();
     }
 
+    // Clean up power-up visual effects
+    this.destroySneakersEffect();
+    this.destroyWeaponEffect();
+
     // Disable physics collisions during death
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.checkCollision.none = true;
@@ -331,6 +347,80 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
       if (this.isAlive) {
         this.die();
       }
+    }
+
+    // Update weapon emitter position based on facing direction
+    this.updateWeaponEmitterPosition();
+  }
+
+  /** Create sneakers power-up visual effect - cyan particle trail at feet */
+  private createSneakersEffect(): void {
+    // Destroy existing emitter if any
+    this.destroySneakersEffect();
+
+    // Create particle emitter that follows the player
+    this.sneakersEmitter = this.scene.add.particles(0, 0, 'particle', {
+      follow: this,
+      followOffset: { x: 0, y: 18 }, // At feet level
+      lifespan: 300,
+      speed: { min: 20, max: 50 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 0.8, end: 0 },
+      tint: 0x00ffff,
+      frequency: 50,
+      angle: { min: 160, max: 200 }, // Emit mostly downward/backward
+      emitting: true,
+    });
+    this.sneakersEmitter.setDepth(this.depth - 1);
+  }
+
+  /** Destroy sneakers visual effect */
+  private destroySneakersEffect(): void {
+    if (this.sneakersEmitter) {
+      this.sneakersEmitter.destroy();
+      this.sneakersEmitter = undefined;
+    }
+  }
+
+  /** Create weapon power-up visual effect - glow particles around gun */
+  private createWeaponEffect(type: 'rapid' | 'spread' | 'piercing'): void {
+    // Destroy existing emitter if any
+    this.destroyWeaponEffect();
+
+    const glowColors: Record<string, number> = {
+      rapid: 0xff4400,    // Red/orange for rapid fire
+      spread: 0x00ff44,   // Green for spread shot
+      piercing: 0x8844ff, // Purple for piercing
+    };
+
+    // Create particle emitter that follows the player near gun position
+    this.weaponEmitter = this.scene.add.particles(0, 0, 'particle', {
+      follow: this,
+      followOffset: { x: this.facingRight ? 14 : -14, y: -4 }, // Near gun position
+      lifespan: 400,
+      speed: { min: 10, max: 30 },
+      scale: { start: 0.6, end: 0 },
+      alpha: { start: 0.6, end: 0 },
+      tint: glowColors[type],
+      frequency: 80,
+      angle: { min: 0, max: 360 }, // Emit in all directions (aura effect)
+      emitting: true,
+    });
+    this.weaponEmitter.setDepth(this.depth - 1);
+  }
+
+  /** Destroy weapon visual effect */
+  private destroyWeaponEffect(): void {
+    if (this.weaponEmitter) {
+      this.weaponEmitter.destroy();
+      this.weaponEmitter = undefined;
+    }
+  }
+
+  /** Update weapon emitter position when player changes direction */
+  private updateWeaponEmitterPosition(): void {
+    if (this.weaponEmitter) {
+      this.weaponEmitter.followOffset.x = this.facingRight ? 14 : -14;
     }
   }
 

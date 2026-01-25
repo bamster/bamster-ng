@@ -12,14 +12,21 @@ interface SoundConfig {
 }
 
 /**
- * SoundManager - Generates retro-style synthesized sound effects
+ * SoundManager - Generates retro-style synthesized sound effects and music
  * Uses Web Audio API to create 80s arcade-style sounds
  */
 export class SoundManager {
   private static instance: SoundManager | null = null;
   private audioContext: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private musicGain: GainNode | null = null;
   private initialized: boolean = false;
+
+  // Music state
+  private isMusicPlaying: boolean = false;
+  private musicIntervalId: number | null = null;
+  private currentBeat: number = 0;
+  private bpm: number = 120;
 
   private constructor() {
     // Private constructor for singleton
@@ -42,6 +49,11 @@ export class SoundManager {
       this.audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       this.masterGain = this.audioContext.createGain();
       this.masterGain.connect(this.audioContext.destination);
+
+      // Create separate gain for music
+      this.musicGain = this.audioContext.createGain();
+      this.musicGain.connect(this.audioContext.destination);
+
       this.updateVolume();
       this.initialized = true;
     } catch (e) {
@@ -53,9 +65,13 @@ export class SoundManager {
    * Update master volume from settings
    */
   updateVolume(): void {
-    if (!this.masterGain) return;
     const settings = getGameSettings();
-    this.masterGain.gain.value = settings.masterVolume * settings.sfxVolume;
+    if (this.masterGain) {
+      this.masterGain.gain.value = settings.masterVolume * settings.sfxVolume;
+    }
+    if (this.musicGain) {
+      this.musicGain.gain.value = settings.masterVolume * settings.musicVolume;
+    }
   }
 
   /**
@@ -310,6 +326,180 @@ export class SoundManager {
 
     // Noise whoosh for falling
     this.playNoise(1.0, 0.15);
+  }
+
+  // =====================================
+  // Background Music System
+  // =====================================
+
+  /**
+   * Start playing procedural background music
+   * Generates an 80s synthwave-style loop
+   */
+  startMusic(): void {
+    if (!this.audioContext || !this.musicGain) {
+      this.init();
+      if (!this.audioContext || !this.musicGain) return;
+    }
+
+    if (this.isMusicPlaying) return;
+
+    // Resume context if suspended
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume();
+    }
+
+    this.isMusicPlaying = true;
+    this.currentBeat = 0;
+    this.updateVolume();
+
+    // Calculate beat interval from BPM
+    const beatInterval = (60 / this.bpm) * 1000;
+
+    // Start the music loop
+    this.playMusicBeat();
+    this.musicIntervalId = window.setInterval(() => {
+      this.playMusicBeat();
+    }, beatInterval);
+  }
+
+  /**
+   * Stop playing background music
+   */
+  stopMusic(): void {
+    if (this.musicIntervalId !== null) {
+      window.clearInterval(this.musicIntervalId);
+      this.musicIntervalId = null;
+    }
+    this.isMusicPlaying = false;
+    this.currentBeat = 0;
+  }
+
+  /**
+   * Check if music is currently playing
+   */
+  isMusicActive(): boolean {
+    return this.isMusicPlaying;
+  }
+
+  /**
+   * Play one beat of the music sequence
+   */
+  private playMusicBeat(): void {
+    if (!this.audioContext || !this.musicGain) return;
+
+    const beatInBar = this.currentBeat % 16; // 16 beats per bar (4 bars of 4 beats)
+    const bar = Math.floor(this.currentBeat / 4) % 4;
+
+    // Bass drum on beats 0, 4, 8, 12
+    if (beatInBar % 4 === 0) {
+      this.playMusicTone(60, 0.15, 'sine', 0.25);
+    }
+
+    // Snare on beats 2, 6, 10, 14
+    if (beatInBar % 4 === 2) {
+      this.playMusicNoise(0.08, 0.15);
+    }
+
+    // Hi-hat on every beat
+    this.playMusicNoise(0.03, 0.05, 8000);
+
+    // Bass line - simple synthwave pattern
+    const bassNotes = [
+      [55, 55, 0, 55],    // Bar 1: A
+      [73, 73, 0, 73],    // Bar 2: D
+      [65, 65, 0, 65],    // Bar 3: C
+      [82, 82, 0, 82],    // Bar 4: E
+    ];
+    const bassNote = bassNotes[bar][beatInBar % 4];
+    if (bassNote > 0) {
+      this.playMusicTone(bassNote, 0.2, 'sawtooth', 0.12);
+    }
+
+    // Arpeggio pattern on even bars
+    if (bar % 2 === 0 && beatInBar % 2 === 0) {
+      const arpeggioNotes = [220, 277, 330, 440]; // A minor arpeggio
+      const noteIndex = (beatInBar / 2) % 4;
+      this.playMusicTone(arpeggioNotes[noteIndex], 0.1, 'square', 0.06);
+    }
+
+    // Pad chord on first beat of each bar
+    if (beatInBar === 0) {
+      const padChords = [
+        [220, 277, 330], // Am
+        [293, 370, 440], // D
+        [262, 330, 392], // C
+        [330, 415, 494], // E
+      ];
+      const chord = padChords[bar];
+      chord.forEach((freq) => {
+        this.playMusicTone(freq, 0.8, 'sine', 0.03);
+      });
+    }
+
+    this.currentBeat++;
+  }
+
+  /**
+   * Play a music tone (connected to music gain)
+   */
+  private playMusicTone(
+    frequency: number,
+    duration: number,
+    type: OscillatorType,
+    gain: number
+  ): void {
+    if (!this.audioContext || !this.musicGain) return;
+
+    const now = this.audioContext.currentTime;
+
+    const oscillator = this.audioContext.createOscillator();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, now);
+
+    const gainNode = this.audioContext.createGain();
+    gainNode.gain.setValueAtTime(gain, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(this.musicGain);
+
+    oscillator.start(now);
+    oscillator.stop(now + duration);
+  }
+
+  /**
+   * Play music noise (for drums, connected to music gain)
+   */
+  private playMusicNoise(duration: number, gain: number, filterFreq: number = 4000): void {
+    if (!this.audioContext || !this.musicGain) return;
+
+    const now = this.audioContext.currentTime;
+    const bufferSize = this.audioContext.sampleRate * duration;
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = this.audioContext.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.audioContext.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = filterFreq;
+
+    const gainNode = this.audioContext.createGain();
+    gainNode.gain.setValueAtTime(gain, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(this.musicGain);
+
+    noise.start(now);
+    noise.stop(now + duration);
   }
 }
 

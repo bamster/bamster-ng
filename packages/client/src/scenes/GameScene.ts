@@ -245,6 +245,9 @@ export class GameScene extends Phaser.Scene {
     // Start spawning blocks
     this.blockSpawner.start();
 
+    // Start background music
+    getSound().startMusic();
+
     // Setup pause key
     this.input.keyboard?.on('keydown-ESC', () => this.togglePause());
     this.input.keyboard?.on('keydown-P', () => this.togglePause());
@@ -1969,6 +1972,7 @@ export class GameScene extends Phaser.Scene {
 
     this.blockSpawner.stop();
     this.eventManager?.stop();
+    getSound().stopMusic();
 
     // Determine final scores
     const scores = this.players.map((p) => ({

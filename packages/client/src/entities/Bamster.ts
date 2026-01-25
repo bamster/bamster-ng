@@ -68,6 +68,10 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
+    // Ensure sprite starts with full color (no tint, full alpha)
+    this.clearTint();
+    this.setAlpha(1);
+
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setCollideWorldBounds(false); // Allow falling off
     body.setBounce(0.05); // Tiny bounce for liveliness

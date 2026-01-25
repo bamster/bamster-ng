@@ -1,5 +1,6 @@
 # BAMster
 <img width="800" height="600" alt="bamster-screenshot-2026-01-25T21-13-56-448Z" src="https://github.com/user-attachments/assets/f9a1b242-08a1-4d90-8ce6-55f245dc113e" />
+<img width="800" height="600" alt="bamster-screenshot-2026-01-25T21-11-24-955Z" src="https://github.com/user-attachments/assets/2eaeb093-ea42-44ed-a091-c54cbdf96602" />
 
 A Tetris-meets-platformer game where BAMster (a hamster with a laser pistol) jumps between falling colorful blocks and shoots them. Supports single-player, local multiplayer, and online multiplayer.
 

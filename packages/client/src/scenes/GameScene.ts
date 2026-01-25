@@ -2247,6 +2247,26 @@ export class GameScene extends Phaser.Scene {
         this.inputManager.setMirrorMode(false);
       },
     });
+
+    // Unlimited Ammo event - rapid fire with no cooldown
+    this.eventManager.registerEvent({
+      id: 'unlimited_ammo',
+      name: 'UNLIMITED AMMO',
+      icon: '🔫',
+      duration: 15000, // 15 seconds
+      onStart: (_scene) => {
+        // Enable unlimited ammo for all players
+        this.players.forEach((player) => {
+          player.unlimitedAmmo = true;
+        });
+      },
+      onEnd: (_scene) => {
+        // Disable unlimited ammo
+        this.players.forEach((player) => {
+          player.unlimitedAmmo = false;
+        });
+      },
+    });
   }
 
   /**

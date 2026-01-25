@@ -25,6 +25,7 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   public isAlive: boolean = true;
   public isDying: boolean = false;
   public facingRight: boolean = true;
+  public unlimitedAmmo: boolean = false;
 
   private lastFireTime: number = 0;
   private laserGroup: Phaser.Physics.Arcade.Group;
@@ -98,11 +99,15 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
 
   shoot(): Laser[] {
     const now = this.scene.time.now;
-    const cooldown =
-      this.weaponType === 'rapid' ? RAPID_FIRE_COOLDOWN : NORMAL_FIRE_COOLDOWN;
 
-    if (now - this.lastFireTime < cooldown) {
-      return [];
+    // Skip cooldown check if unlimited ammo is active
+    if (!this.unlimitedAmmo) {
+      const cooldown =
+        this.weaponType === 'rapid' ? RAPID_FIRE_COOLDOWN : NORMAL_FIRE_COOLDOWN;
+
+      if (now - this.lastFireTime < cooldown) {
+        return [];
+      }
     }
 
     this.lastFireTime = now;

@@ -234,19 +234,16 @@ export class BlockSpawner {
 
     // Determine if we should spawn a power-up
     let shouldSpawnPowerUp = false;
-    let spawnReason = '';
 
     // Power-Up Shower event: 100% power-up spawn rate
     if (this.powerUpOnlyMode) {
       shouldSpawnPowerUp = true;
-      spawnReason = 'powerUpOnlyMode (event active)';
     }
 
     // Score-based guarantee: if player has 200+ points and no power-up has spawned yet
     const currentScore = this.getScoreCallback ? this.getScoreCallback() : 0;
     if (this.powerUpSpawnedCount === 0 && currentScore >= 200) {
       shouldSpawnPowerUp = true;
-      spawnReason = `scoreGuarantee (score: ${currentScore})`;
     }
 
     // Guarantee first power-up between spawns 5-8 (gives player time to adjust)
@@ -255,7 +252,6 @@ export class BlockSpawner {
       const earlyChance = (this.spawnCount - 4) * 0.25;
       if (Math.random() < earlyChance) {
         shouldSpawnPowerUp = true;
-        spawnReason = `earlyChance: ${(earlyChance * 100).toFixed(0)}%`;
         this.earlyPowerUpSpawned = true;
       }
     }
@@ -265,15 +261,10 @@ export class BlockSpawner {
       // Double power-up chance for first 20 spawns
       const effectiveChance =
         this.spawnCount <= 20 ? POWERUP_SPAWN_CHANCE * 2 : POWERUP_SPAWN_CHANCE;
-      const roll = Math.random();
-      if (roll < effectiveChance) {
+      if (Math.random() < effectiveChance) {
         shouldSpawnPowerUp = true;
-        spawnReason = `regularChance (${(effectiveChance * 100).toFixed(1)}%, rolled ${(roll * 100).toFixed(1)}%)`;
       }
     }
-
-    // Debug logging
-    console.log(`[Spawn #${this.spawnCount}] shouldSpawnPowerUp: ${shouldSpawnPowerUp}${spawnReason ? ` (${spawnReason})` : ''}`);
 
     if (shouldSpawnPowerUp) {
       this.spawnPowerUp(x, y);
@@ -314,9 +305,6 @@ export class BlockSpawner {
     powerUp.setVelocityY(BLOCK_FALL_SPEED * 0.7);
 
     this.powerUpSpawnedCount++;
-
-    // Debug logging
-    console.log(`POWER-UP SPAWNED: ${type} at (${x.toFixed(0)}, ${y.toFixed(0)}) [total: ${this.powerUpSpawnedCount}]`);
 
     return powerUp;
   }

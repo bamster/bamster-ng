@@ -94,7 +94,6 @@ export class AchievementManager {
       }
     });
 
-    console.log(`Achievement unlocked: ${achievement.name}`);
     return true;
   }
 

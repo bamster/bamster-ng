@@ -42,6 +42,13 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   private sneakersEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
   private weaponEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
 
+  // Invincibility frames after damage
+  private iframesTimer?: Phaser.Time.TimerEvent;
+  private iframesFlashTween?: Phaser.Tweens.Tween;
+
+  // Landing detection for dust effect
+  private wasInAir: boolean = false;
+
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -240,7 +247,7 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(): boolean {
-    // Invincible players take no damage
+    // Invincible players take no damage (includes iframes)
     if (this.invincible) {
       return false;
     }
@@ -256,15 +263,48 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     // Visual feedback - shrink slightly (capped at 1.15x to avoid becoming too large)
     const scaleBonus = Math.min((this.health - 1) * 0.03, 0.15);
     this.setScale(1 + scaleBonus);
-    this.scene.tweens.add({
-      targets: this,
-      alpha: 0.5,
-      duration: 100,
-      yoyo: true,
-      repeat: 3,
-    });
+
+    // Activate invincibility frames to prevent chain-hits
+    this.activateIframes();
 
     return false;
+  }
+
+  /** Activate brief invincibility frames after taking damage */
+  private activateIframes(): void {
+    // Clear existing iframes timer if any
+    if (this.iframesTimer) {
+      this.iframesTimer.destroy();
+    }
+    if (this.iframesFlashTween) {
+      this.iframesFlashTween.stop();
+    }
+
+    // Make player invincible
+    this.invincible = true;
+
+    // Flashing effect during iframes
+    this.iframesFlashTween = this.scene.tweens.add({
+      targets: this,
+      alpha: { from: 1, to: 0.3 },
+      duration: 80,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: Math.floor(DAMAGE_INVINCIBILITY_DURATION / 160) - 1,
+    });
+
+    // End iframes after duration
+    this.iframesTimer = this.scene.time.delayedCall(DAMAGE_INVINCIBILITY_DURATION, () => {
+      this.invincible = false;
+      this.setAlpha(1); // Ensure alpha is reset
+      this.iframesTimer = undefined;
+      this.iframesFlashTween = undefined;
+    });
+  }
+
+  /** Check if player is in invincibility frames (from damage, not power-up) */
+  hasIframes(): boolean {
+    return this.iframesTimer !== undefined;
   }
 
   die(): void {
@@ -280,6 +320,12 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     }
     if (this.weaponTimer) {
       this.weaponTimer.destroy();
+    }
+    if (this.iframesTimer) {
+      this.iframesTimer.destroy();
+    }
+    if (this.iframesFlashTween) {
+      this.iframesFlashTween.stop();
     }
 
     // Clean up power-up visual effects
@@ -325,6 +371,12 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     // Only reset jump when actually touching ground (physics flags)
     // Don't use velocity check as it can be 0 at apex of jump
     const onGround = body.blocked.down || body.touching.down;
+
+    // Detect landing (was in air, now on ground)
+    if (onGround && this.wasInAir) {
+      this.createLandingDust();
+    }
+    this.wasInAir = !onGround;
 
     if (onGround) {
       this.canJump = true;
@@ -484,6 +536,32 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
 
     // Clean up particles after they finish
     this.scene.time.delayedCall(150, () => {
+      particles.destroy();
+    });
+  }
+
+  /** Create dust puff effect when landing from a jump */
+  private createLandingDust(): void {
+    // Position dust at feet level
+    const dustX = this.x;
+    const dustY = this.y + 20;
+
+    // Create particle emitter for dust puff (80s neon style - purple/magenta)
+    const particles = this.scene.add.particles(dustX, dustY, 'particle', {
+      lifespan: 250,
+      speed: { min: 30, max: 80 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 0.7, end: 0 },
+      tint: 0xff00ff,
+      angle: { min: 200, max: 340 }, // Spread outward and upward
+      gravityY: -50, // Float upward slightly
+      emitting: false,
+    });
+    particles.setDepth(this.depth - 1);
+    particles.explode(8);
+
+    // Clean up particles after they finish
+    this.scene.time.delayedCall(300, () => {
       particles.destroy();
     });
   }

@@ -89,6 +89,53 @@ pnpm typecheck
 pnpm build
 ```
 
+## Deployment
+
+### Build for Production
+
+```bash
+# Build shared package first (required)
+pnpm --filter @bamster/shared build
+
+# Build client
+pnpm --filter @bamster/client build
+```
+
+Output will be in `packages/client/dist/`.
+
+### Deploy to Static Hosting
+
+The client builds to static files that can be hosted anywhere:
+
+```bash
+# Netlify
+npx netlify deploy --dir=packages/client/dist --prod
+
+# Vercel
+cd packages/client && npx vercel --prod
+
+# GitHub Pages
+# Copy dist/ contents to gh-pages branch
+
+# Any web server
+scp -r packages/client/dist/* user@server:/var/www/html/
+```
+
+### Deploy Multiplayer Server
+
+For online multiplayer, deploy the server to a Node.js host (Railway, Render, Fly.io):
+
+1. Build: `pnpm --filter @bamster/server build`
+2. Set the `PORT` environment variable
+3. Update client's server URL in `packages/client/src/systems/NetworkManager.ts`
+
+## Debug Mode
+
+Press **F3** to enable debug mode, then:
+- **F4**: Trigger "Floor is Lava" event
+- **F5**: Trigger random event
+- **F8**: Toggle invincibility (for screenshots/testing)
+
 ## Tech Stack
 
 - **Game Engine**: [Phaser 3](https://phaser.io/)

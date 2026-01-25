@@ -2500,6 +2500,20 @@ export class GameScene extends Phaser.Scene {
         this.cameras.main.shake(100, 0.003);
       },
     });
+
+    // Giant Block event - spawns a massive block cluster
+    this.eventManager.registerEvent({
+      id: 'giant_block',
+      name: 'GIANT BLOCK',
+      icon: '🟫',
+      duration: 3000, // Short duration - just for announcement
+      onStart: (_scene) => {
+        this.spawnGiantBlock();
+      },
+      onEnd: (_scene) => {
+        // Nothing to clean up
+      },
+    });
   }
 
   /**
@@ -2830,5 +2844,63 @@ export class GameScene extends Phaser.Scene {
         block.setAngle(0);
       },
     });
+  }
+
+  /**
+   * Spawn a giant block cluster (2x2 or 3x3)
+   */
+  private spawnGiantBlock(): void {
+    // Decide on size: 2x2 (75%) or 3x3 (25%)
+    const is3x3 = Math.random() < 0.25;
+    const size = is3x3 ? 3 : 2;
+
+    // Pick a random color
+    const colors: BlockColor[] = ['magenta', 'cyan', 'lime', 'orange', 'violet'];
+    const color = colors[Phaser.Math.Between(0, colors.length - 1)];
+
+    // Calculate grid position - ensure giant block fits within play area
+    const usableWidth = PLAY_AREA_WIDTH - FRAME_WIDTH * 2;
+    const gridColumns = Math.floor(usableWidth / BLOCK_SIZE);
+    const maxColumn = gridColumns - size;
+    const startColumn = Phaser.Math.Between(0, maxColumn);
+
+    // Spawn position
+    const startX = FRAME_WIDTH + startColumn * BLOCK_SIZE + BLOCK_SIZE / 2;
+    const startY = this.blockSpawner.isGravityFlipped()
+      ? GAME_HEIGHT + BLOCK_SIZE
+      : -BLOCK_SIZE * size;
+
+    // Create blocks in a grid pattern
+    const blocks: Block[] = [];
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        const x = startX + col * BLOCK_SIZE;
+        const y = startY + row * BLOCK_SIZE;
+
+        const block = new Block(this, x, y, color);
+        block.setFallSpeed(this.blockSpawner.isGravityFlipped() ? -100 : 100);
+        this.blockGroup.add(block);
+        blocks.push(block);
+      }
+    }
+
+    // Add visual effect - make them pulse/glow
+    blocks.forEach((block) => {
+      block.setTint(0xffffff);
+      this.tweens.add({
+        targets: block,
+        alpha: { from: 1, to: 0.7 },
+        duration: 200,
+        yoyo: true,
+        repeat: 3,
+        onComplete: () => {
+          block.clearTint();
+          block.setAlpha(1);
+        },
+      });
+    });
+
+    // Play sound
+    getSound().play('powerup');
   }
 }

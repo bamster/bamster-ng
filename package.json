@@ -8,13 +8,26 @@
     "dev:server": "pnpm --filter @bamster/server dev",
     "dev:all": "pnpm run --parallel /dev/",
     "build": "pnpm -r build",
+    "build:prod": "pnpm -r build && echo 'Production builds complete'",
+    "start:server": "pnpm --filter @bamster/server start:prod",
+    "preview": "pnpm --filter @bamster/client preview",
     "lint": "pnpm -r lint",
-    "typecheck": "pnpm -r typecheck"
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r exec rm -rf dist"
   },
-  "keywords": ["game", "phaser", "tetris", "platformer"],
+  "keywords": [
+    "game",
+    "phaser",
+    "tetris",
+    "platformer"
+  ],
   "author": "",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.18"
   }
 }

@@ -1764,6 +1764,12 @@ export class GameScene extends Phaser.Scene {
       case 'bomb':
         this.handleBombPowerUp(player);
         break;
+      case 'rate':
+        player.collectRateUpgrade();
+        break;
+      case 'double':
+        player.collectDoubleShot();
+        break;
     }
 
     // Track power-up collection for achievements

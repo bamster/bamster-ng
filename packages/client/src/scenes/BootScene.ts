@@ -504,6 +504,51 @@ export class BootScene extends Phaser.Scene {
     bombGraphics.fillRect(center - 2, center + 4, 4, 2);
     bombGraphics.generateTexture('powerup_bomb', size, size);
     bombGraphics.destroy();
+
+    // Fire Rate upgrade power-up (permanent) - neon yellow/gold
+    const rateGraphics = this.make.graphics({ x: 0, y: 0 });
+    // Outer glow
+    rateGraphics.fillStyle(0xffff00, 0.3);
+    rateGraphics.fillCircle(center, center, 14);
+    // Inner circle
+    rateGraphics.fillStyle(0xffaa00, 1);
+    rateGraphics.fillCircle(center, center, 11);
+    // Up arrows (speed increase icon)
+    rateGraphics.fillStyle(0xffffff, 1);
+    // Left arrow
+    rateGraphics.fillTriangle(center - 6, center + 4, center - 2, center - 6, center + 2, center + 4);
+    // Right arrow
+    rateGraphics.fillTriangle(center - 2, center + 8, center + 2, center - 2, center + 6, center + 8);
+    // Plus sign
+    rateGraphics.fillStyle(0x00ff00, 1);
+    rateGraphics.fillRect(center + 4, center - 8, 6, 2);
+    rateGraphics.fillRect(center + 6, center - 10, 2, 6);
+    rateGraphics.generateTexture('powerup_rate', size, size);
+    rateGraphics.destroy();
+
+    // Double Shot power-up (permanent) - neon magenta/purple
+    const doubleGraphics = this.make.graphics({ x: 0, y: 0 });
+    // Outer glow
+    doubleGraphics.fillStyle(0xff00ff, 0.3);
+    doubleGraphics.fillCircle(center, center, 14);
+    // Inner circle
+    doubleGraphics.fillStyle(0xaa00aa, 1);
+    doubleGraphics.fillCircle(center, center, 11);
+    // Two parallel laser beams icon
+    doubleGraphics.fillStyle(0x00ffff, 1);
+    // Top beam
+    doubleGraphics.fillRect(6, center - 5, 16, 4);
+    doubleGraphics.fillTriangle(22, center - 7, 22, center + 1, 28, center - 3);
+    // Bottom beam
+    doubleGraphics.fillRect(6, center + 1, 16, 4);
+    doubleGraphics.fillTriangle(22, center - 1, 22, center + 7, 28, center + 3);
+    // "x2" text hint
+    doubleGraphics.fillStyle(0xffff00, 1);
+    doubleGraphics.fillRect(center - 8, center + 6, 2, 4);
+    doubleGraphics.fillRect(center - 6, center + 8, 2, 4);
+    doubleGraphics.fillRect(center - 4, center + 6, 2, 4);
+    doubleGraphics.generateTexture('powerup_double', size, size);
+    doubleGraphics.destroy();
   }
 
   private generateParticleTexture(): void {

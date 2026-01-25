@@ -1,0 +1,32 @@
+[user]
+	name = Christian Geier
+    email = geier@lostpackets.de
+[color]
+	ui = true
+[alias]
+	undo-commit = reset --soft HEAD^
+	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%C(bold blue)<%an>%Creset' --abbrev-commit
+	hub = !xdg-open $(echo $(git config --get remote.origin.url) |perl -pe \"s|git\\@github\\.com:|https://github.com/|\")
+	bb = !better-git-branch.sh
+[color "branch"]
+	current = red
+	remote = green
+[push]
+	default = simple
+	autoSetupRemote = true
+[ghi]
+	token = !keyring_helper.py github.com ghi
+[rebase]
+	autostash = true
+	updateRefs = true
+[diff]
+	indentHeuristic = true
+	algorithm = histogram
+[core]
+	quotepath = off
+	excludesfile = /Users/cg/.gitignore_global
+[http]
+	postbuffer = 2097152000
+[rerere]
+	enabled = true
+	autoupdate = true

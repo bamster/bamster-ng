@@ -3,8 +3,10 @@ import {
   BAMSTER_SPEED,
   BAMSTER_JUMP_VELOCITY,
   BAMSTER_STARTING_HEALTH,
-  NORMAL_FIRE_COOLDOWN,
+  SLOW_FIRE_COOLDOWN,
   RAPID_FIRE_COOLDOWN,
+  FIRE_RATE_UPGRADE_AMOUNT,
+  MIN_FIRE_COOLDOWN,
   SPREAD_SHOT_ANGLE,
   SNEAKERS_JUMP_MULTIPLIER,
   POWERUP_DURATION,
@@ -28,6 +30,10 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   public facingRight: boolean = true;
   public unlimitedAmmo: boolean = false;
   public invincible: boolean = false;
+
+  // Permanent upgrades (persist until death)
+  public fireRateLevel: number = 0; // Number of rate upgrades collected
+  public hasDoubleShot: boolean = false; // Fires two parallel shots
 
   private lastFireTime: number = 0;
   private laserGroup: Phaser.Physics.Arcade.Group;
@@ -123,8 +129,7 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
 
     // Skip cooldown check if unlimited ammo is active
     if (!this.unlimitedAmmo) {
-      const cooldown =
-        this.weaponType === 'rapid' ? RAPID_FIRE_COOLDOWN : NORMAL_FIRE_COOLDOWN;
+      const cooldown = this.getFireCooldown();
 
       if (now - this.lastFireTime < cooldown) {
         return [];
@@ -141,39 +146,58 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     // Create muzzle flash effect
     this.createMuzzleFlash(offsetX);
 
+    // Y offsets for double shot (two parallel lasers)
+    const yOffsets = this.hasDoubleShot ? [-6, 6] : [0];
+
     if (this.weaponType === 'spread') {
       // Shoot 3 lasers in a fan (spread shot is never piercing)
       const angles = [-SPREAD_SHOT_ANGLE, 0, SPREAD_SHOT_ANGLE];
-      for (const angle of angles) {
+      for (const yOffset of yOffsets) {
+        for (const angle of angles) {
+          const laser = new Laser(
+            this.scene,
+            this.x + offsetX,
+            this.y + yOffset,
+            direction,
+            angle,
+            this.playerId,
+            false
+          );
+          this.laserGroup.add(laser);
+          laser.initPhysics();
+          lasers.push(laser);
+        }
+      }
+    } else {
+      for (const yOffset of yOffsets) {
         const laser = new Laser(
           this.scene,
           this.x + offsetX,
-          this.y,
+          this.y + yOffset,
           direction,
-          angle,
+          0,
           this.playerId,
-          false
+          this.weaponType === 'piercing'
         );
         this.laserGroup.add(laser);
         laser.initPhysics();
         lasers.push(laser);
       }
-    } else {
-      const laser = new Laser(
-        this.scene,
-        this.x + offsetX,
-        this.y,
-        direction,
-        0,
-        this.playerId,
-        this.weaponType === 'piercing'
-      );
-      this.laserGroup.add(laser);
-      laser.initPhysics();
-      lasers.push(laser);
     }
 
     return lasers;
+  }
+
+  /** Calculate current fire cooldown based on upgrades and weapon type */
+  private getFireCooldown(): number {
+    // Rapid fire power-up has highest priority
+    if (this.weaponType === 'rapid') {
+      return RAPID_FIRE_COOLDOWN;
+    }
+
+    // Base cooldown starts slow, reduced by permanent upgrades
+    const baseCooldown = SLOW_FIRE_COOLDOWN - (this.fireRateLevel * FIRE_RATE_UPGRADE_AMOUNT);
+    return Math.max(baseCooldown, MIN_FIRE_COOLDOWN);
   }
 
   collectCorn(): void {
@@ -236,6 +260,62 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
       this.hideGunOverlay();
       this.weaponTimer = undefined;
     });
+  }
+
+  /** Collect fire rate upgrade (permanent - faster base firing speed) */
+  collectRateUpgrade(): void {
+    this.fireRateLevel++;
+
+    // Visual feedback - yellow flash for rate upgrade
+    this.flashEffect(0xffff00);
+
+    // Create brief particle burst
+    const particles = this.scene.add.particles(this.x, this.y, 'particle', {
+      lifespan: 400,
+      speed: { min: 50, max: 100 },
+      scale: { start: 0.8, end: 0 },
+      alpha: { start: 1, end: 0 },
+      tint: 0xffff00,
+      emitting: false,
+    });
+    particles.explode(12);
+    this.scene.time.delayedCall(500, () => particles.destroy());
+  }
+
+  /** Collect double shot upgrade (permanent - fires two parallel shots) */
+  collectDoubleShot(): void {
+    if (this.hasDoubleShot) {
+      // Already have double shot - give score bonus instead
+      this.addScore(200);
+      return;
+    }
+
+    this.hasDoubleShot = true;
+
+    // Visual feedback - magenta flash for double shot
+    this.flashEffect(0xff00ff);
+
+    // Create dramatic particle burst
+    const particles = this.scene.add.particles(this.x, this.y, 'particle', {
+      lifespan: 600,
+      speed: { min: 80, max: 150 },
+      scale: { start: 1, end: 0 },
+      alpha: { start: 1, end: 0 },
+      tint: [0xff00ff, 0xff88ff],
+      emitting: false,
+    });
+    particles.explode(20);
+    this.scene.time.delayedCall(700, () => particles.destroy());
+  }
+
+  /** Get current fire rate level */
+  getFireRateLevel(): number {
+    return this.fireRateLevel;
+  }
+
+  /** Check if has double shot */
+  getHasDoubleShot(): boolean {
+    return this.hasDoubleShot;
   }
 
   /** Get remaining time for sneakers power-up (0-1 fraction, or 0 if not active) */

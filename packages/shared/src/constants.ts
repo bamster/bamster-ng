@@ -39,8 +39,11 @@ export const CORN_HEALTH_BONUS = 1;
 export const SNEAKERS_JUMP_MULTIPLIER = 1.5;
 
 // Weapon settings
-export const RAPID_FIRE_COOLDOWN = 100; // ms
-export const NORMAL_FIRE_COOLDOWN = 300; // ms
+export const SLOW_FIRE_COOLDOWN = 500; // ms - starting fire rate (slower)
+export const NORMAL_FIRE_COOLDOWN = 300; // ms - after some upgrades
+export const RAPID_FIRE_COOLDOWN = 100; // ms - with rapid power-up
+export const FIRE_RATE_UPGRADE_AMOUNT = 75; // ms reduction per permanent upgrade
+export const MIN_FIRE_COOLDOWN = 150; // ms - minimum achievable base cooldown
 export const SPREAD_SHOT_ANGLE = 15; // degrees
 
 // Scoring

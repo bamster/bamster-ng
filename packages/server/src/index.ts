@@ -8,13 +8,19 @@ import { SERVER_PORT } from '@bamster/shared';
 
 const app = express();
 
+// Use PORT env variable or default
+const port = parseInt(process.env.PORT || String(SERVER_PORT), 10);
+const isProduction = process.env.NODE_ENV === 'production';
+
 // Health check endpoint
 app.get('/health', (_, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Colyseus monitor (admin UI)
-app.use('/colyseus', monitor());
+// Colyseus monitor (admin UI) - only enable in non-production or with auth
+if (!isProduction || process.env.ENABLE_MONITOR === 'true') {
+  app.use('/colyseus', monitor());
+}
 
 const httpServer = createServer(app);
 
@@ -28,7 +34,9 @@ const gameServer = new Server({
 gameServer.define('game', GameRoom);
 gameServer.define('quickmatch', GameRoom).enableRealtimeListing();
 
-httpServer.listen(SERVER_PORT, () => {
-  console.log(`BAMster server listening on port ${SERVER_PORT}`);
-  console.log(`Monitor available at http://localhost:${SERVER_PORT}/colyseus`);
+httpServer.listen(port, () => {
+  console.log(`BAMster server listening on port ${port}`);
+  if (!isProduction || process.env.ENABLE_MONITOR === 'true') {
+    console.log(`Monitor available at http://localhost:${port}/colyseus`);
+  }
 });

@@ -289,15 +289,31 @@ export class BlockSpawner {
   }
 
   private spawnPowerUp(x: number, y: number): PowerUp {
-    const types: PowerUpType[] = [
-      'corn',
-      'sneakers',
-      'rapid',
-      'spread',
-      'piercing',
-      'bomb',
+    // Power-ups with spawn weights (higher = more common)
+    // Permanent upgrades (rate, double) are rarer
+    const weightedTypes: Array<{ type: PowerUpType; weight: number }> = [
+      { type: 'corn', weight: 20 },      // Common - health
+      { type: 'sneakers', weight: 15 },   // Fairly common - temporary
+      { type: 'rapid', weight: 10 },      // Temporary weapon
+      { type: 'spread', weight: 10 },     // Temporary weapon
+      { type: 'piercing', weight: 10 },   // Temporary weapon
+      { type: 'bomb', weight: 8 },        // Row clear
+      { type: 'rate', weight: 12 },       // Permanent fire rate upgrade - semi-common
+      { type: 'double', weight: 5 },      // Permanent double shot - rare
     ];
-    const type = types[Phaser.Math.Between(0, types.length - 1)];
+
+    // Weighted random selection
+    const totalWeight = weightedTypes.reduce((sum, item) => sum + item.weight, 0);
+    let random = Phaser.Math.Between(1, totalWeight);
+    let type: PowerUpType = 'corn';
+
+    for (const item of weightedTypes) {
+      random -= item.weight;
+      if (random <= 0) {
+        type = item.type;
+        break;
+      }
+    }
     const powerUp = new PowerUp(this.scene, x, y, type);
     this.powerUpGroup.add(powerUp);
 

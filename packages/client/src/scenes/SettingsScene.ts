@@ -19,6 +19,7 @@ export interface DifficultyConfig {
   blockSpawnInterval: number;
   startingHealth: number;
   blockSpawnIntervalMin: number;
+  comboTimeout: number; // ms - time before combo resets
   label: string;
 }
 
@@ -28,6 +29,7 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     blockSpawnInterval: 1600,
     blockSpawnIntervalMin: 600,
     startingHealth: 5,
+    comboTimeout: 3000, // 3 seconds - more forgiving
     label: 'EASY',
   },
   normal: {
@@ -35,6 +37,7 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     blockSpawnInterval: 1200,
     blockSpawnIntervalMin: 400,
     startingHealth: 3,
+    comboTimeout: 2000, // 2 seconds - balanced
     label: 'NORMAL',
   },
   hard: {
@@ -42,6 +45,7 @@ export const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     blockSpawnInterval: 800,
     blockSpawnIntervalMin: 250,
     startingHealth: 2,
+    comboTimeout: 1500, // 1.5 seconds - challenging
     label: 'HARD',
   },
 };

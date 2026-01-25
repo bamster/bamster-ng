@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Build shared package
+        run: pnpm --filter @bamster/shared build
+
       - name: Run type checking
         run: pnpm typecheck
 
@@ -63,6 +66,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+
+      - name: Build shared package
+        run: pnpm --filter @bamster/shared build
 
       - name: Build for production
         run: pnpm build:prod

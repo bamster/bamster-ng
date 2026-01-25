@@ -316,11 +316,9 @@ export class GameScene extends Phaser.Scene {
       if (isDebugMode()) {
         this.players.forEach((player) => {
           player.invincible = !player.invincible;
-          if (player.invincible) {
-            player.setTint(0x00ff00); // Green tint when invincible
-          } else {
-            player.clearTint();
-          }
+          // Quick flash to indicate toggle, then clear
+          player.setTint(player.invincible ? 0x00ff00 : 0xff0000);
+          this.time.delayedCall(150, () => player.clearTint());
         });
       }
     });

@@ -11,6 +11,7 @@ import {
   PLAY_AREA_WIDTH,
   FRAME_WIDTH,
   COYOTE_TIME,
+  DAMAGE_INVINCIBILITY_DURATION,
 } from '@bamster/shared';
 import type { WeaponType } from '@bamster/shared';
 import { Laser } from './Laser';
@@ -121,6 +122,9 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
 
     const offsetX = this.facingRight ? 24 : -24;
     const direction = this.facingRight ? 1 : -1;
+
+    // Create muzzle flash effect
+    this.createMuzzleFlash(offsetX);
 
     if (this.weaponType === 'spread') {
       // Shoot 3 lasers in a fan (spread shot is never piercing)
@@ -429,6 +433,58 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     this.setTint(color);
     this.scene.time.delayedCall(100, () => {
       this.clearTint();
+    });
+  }
+
+  /** Create muzzle flash effect when shooting */
+  private createMuzzleFlash(offsetX: number): void {
+    // Determine flash color based on weapon type
+    const flashColors: Record<string, number> = {
+      basic: 0xffff00,    // Yellow for basic
+      rapid: 0xff4400,    // Red/orange for rapid fire
+      spread: 0x00ff44,   // Green for spread shot
+      piercing: 0x00ffff, // Cyan for piercing
+    };
+    const color = flashColors[this.weaponType] ?? 0xffff00;
+
+    // Create muzzle flash particle burst
+    const flashX = this.x + offsetX;
+    const flashY = this.y - 4;
+
+    // Create particle emitter for muzzle flash
+    const particles = this.scene.add.particles(flashX, flashY, 'particle', {
+      lifespan: 100,
+      speed: { min: 50, max: 120 },
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 1, end: 0 },
+      tint: color,
+      angle: this.facingRight ? { min: -30, max: 30 } : { min: 150, max: 210 },
+      emitting: false,
+    });
+    particles.setDepth(this.depth + 1);
+    particles.explode(6);
+
+    // Also create a brief glow sprite for extra impact
+    const glow = this.scene.add.circle(flashX, flashY, 12, color, 0.8);
+    glow.setDepth(this.depth + 1);
+    glow.setBlendMode(Phaser.BlendModes.ADD);
+
+    // Animate glow and clean up
+    this.scene.tweens.add({
+      targets: glow,
+      scaleX: 2,
+      scaleY: 2,
+      alpha: 0,
+      duration: 80,
+      ease: 'Quad.easeOut',
+      onComplete: () => {
+        glow.destroy();
+      },
+    });
+
+    // Clean up particles after they finish
+    this.scene.time.delayedCall(150, () => {
+      particles.destroy();
     });
   }
 

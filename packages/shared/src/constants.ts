@@ -46,6 +46,7 @@ export const SPREAD_SHOT_ANGLE = 15; // degrees
 // Scoring
 export const SCORE_PER_BLOCK = 10;
 export const COMBO_MULTIPLIER = 1.5; // multiplier for merged block bonus
+export const MAX_COMBO_MULTIPLIER = 3.0; // Maximum combo score multiplier (reached at 9 combo)
 
 // Network
 export const SERVER_PORT = 2567;

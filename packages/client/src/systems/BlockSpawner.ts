@@ -241,6 +241,10 @@ export class BlockSpawner {
     const type = types[Phaser.Math.Between(0, types.length - 1)];
     const powerUp = new PowerUp(this.scene, x, y, type);
     this.powerUpGroup.add(powerUp);
+
+    // Set velocity AFTER adding to group (group may reset velocity on add)
+    powerUp.setVelocityY(BLOCK_FALL_SPEED * 0.7);
+
     this.powerUpSpawnedCount++;
 
     // Debug logging

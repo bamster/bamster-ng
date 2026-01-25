@@ -40,9 +40,9 @@ export class MenuScene extends Phaser.Scene {
       graphics.lineBetween(0, y, GAME_WIDTH, y);
     }
 
-    // Title with chrome/neon effect - split into "BAMster" and "2OOO" for rainbow effect
-    const titleX = GAME_WIDTH / 2 - 60;
-    const yearX = GAME_WIDTH / 2 + 155;
+    // Title with chrome/neon effect - split into "BAMster" and "2OOO"
+    const titleX = GAME_WIDTH / 2 - 100;
+    const yearX = GAME_WIDTH / 2 + 180;
 
     // Shadow for "BAMster"
     const titleShadow = this.add.text(titleX + 4, 84, 'BAMster', {
@@ -72,36 +72,40 @@ export class MenuScene extends Phaser.Scene {
     titleGlow.setAlpha(0.3);
     titleGlow.setBlendMode(Phaser.BlendModes.ADD);
 
-    // Shadow for "2OOO" (using O instead of 0 for no strikethrough)
-    const yearShadow = this.add.text(yearX + 4, 84, '2OOO', {
-      fontSize: '72px',
-      fontFamily: 'monospace',
-      color: '#330033',
-    });
-    yearShadow.setOrigin(0.5);
+    // Rainbow chromatic aberration effect for "2OOO" - layered colors offset
+    const rainbowLayers = [
+      { color: '#ff0000', offsetY: -6, alpha: 0.5 },  // Red on top
+      { color: '#ff8800', offsetY: -4, alpha: 0.6 },  // Orange
+      { color: '#ffff00', offsetY: -2, alpha: 0.7 },  // Yellow
+      { color: '#00ff00', offsetY: 0, alpha: 0.8 },   // Green (center-ish)
+      { color: '#00ffff', offsetY: 2, alpha: 0.9 },   // Cyan
+      { color: '#0088ff', offsetY: 4, alpha: 0.8 },   // Blue
+      { color: '#ff00ff', offsetY: 6, alpha: 0.7 },   // Magenta at bottom
+    ];
 
-    // Main "2OOO" text with rainbow effect
+    // Create rainbow layers (back to front)
+    const yearLayers: Phaser.GameObjects.Text[] = [];
+    rainbowLayers.forEach((layer) => {
+      const yearLayer = this.add.text(yearX, 80 + layer.offsetY, '2OOO', {
+        fontSize: '72px',
+        fontFamily: 'monospace',
+        color: layer.color,
+      });
+      yearLayer.setOrigin(0.5);
+      yearLayer.setAlpha(layer.alpha);
+      yearLayer.setBlendMode(Phaser.BlendModes.ADD);
+      yearLayers.push(yearLayer);
+    });
+
+    // Main "2OOO" text on top (white/bright core)
     const year = this.add.text(yearX, 80, '2OOO', {
       fontSize: '72px',
       fontFamily: 'monospace',
-      color: '#ffff00',
+      color: '#ffffff',
       stroke: '#ffffff',
-      strokeThickness: 4,
+      strokeThickness: 2,
     });
     year.setOrigin(0.5);
-
-    // Rainbow color cycling for "2OOO"
-    const rainbowColors = ['#ff0000', '#ff8800', '#ffff00', '#00ff00', '#00ffff', '#0088ff', '#8800ff', '#ff00ff'];
-    let colorIndex = 0;
-    this.time.addEvent({
-      delay: 150,
-      callback: () => {
-        year.setColor(rainbowColors[colorIndex]);
-        year.setStroke(rainbowColors[(colorIndex + 4) % rainbowColors.length], 4);
-        colorIndex = (colorIndex + 1) % rainbowColors.length;
-      },
-      loop: true,
-    });
 
     // Subtitle
     const subtitle = this.add.text(GAME_WIDTH / 2, 150, "★ It's BAMster time! ★", {
@@ -111,19 +115,54 @@ export class MenuScene extends Phaser.Scene {
     });
     subtitle.setOrigin(0.5);
 
-    // BAMster preview on the left side - use sprite with cape animation
-    const bamster = this.add.sprite(150, GAME_HEIGHT / 2 + 50, 'bamster');
+    // BAMster preview on the left side - centered so cape is fully visible
+    const bamster = this.add.sprite(200, GAME_HEIGHT / 2 + 50, 'bamster');
     bamster.setScale(5);
-    bamster.play('bamster_run'); // Play running animation for cape movement
 
-    // Add a gentle floating animation to BAMster
+    // Start with idle pose (cape hanging naturally)
+    bamster.setTexture('bamster');
+
+    // Gentle floating animation
     this.tweens.add({
       targets: bamster,
       y: GAME_HEIGHT / 2 + 60,
-      duration: 2000,
+      duration: 2500,
       ease: 'Sine.easeInOut',
       yoyo: true,
       repeat: -1,
+    });
+
+    // Gentle cape movement - alternate between idle and run frames slowly
+    // This creates a subtle "wind" effect
+    let capeFrame = 0;
+    const capeFrames = ['bamster', 'bamster_run1', 'bamster', 'bamster_run2'];
+    this.time.addEvent({
+      delay: 800, // Slow, gentle movement
+      callback: () => {
+        bamster.setTexture(capeFrames[capeFrame]);
+        capeFrame = (capeFrame + 1) % capeFrames.length;
+      },
+      loop: true,
+    });
+
+    // Occasional foot shuffle - random timing, not constant
+    this.time.addEvent({
+      delay: 3000, // Check every 3 seconds
+      callback: () => {
+        // 40% chance to do a quick foot shuffle
+        if (Math.random() < 0.4) {
+          // Quick shuffle: run1 -> run2 -> idle
+          const originalFrame = capeFrame;
+          bamster.setTexture('bamster_run1');
+          this.time.delayedCall(150, () => {
+            bamster.setTexture('bamster_run2');
+            this.time.delayedCall(150, () => {
+              bamster.setTexture(capeFrames[originalFrame]);
+            });
+          });
+        }
+      },
+      loop: true,
     });
 
     // Menu buttons - centered with comfortable spacing
@@ -158,14 +197,27 @@ export class MenuScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    // Animate year "2OOO" in sync
+    // Animate year "2OOO" - main text and all rainbow layers in sync
     this.tweens.add({
-      targets: [year, yearShadow],
+      targets: year,
       y: 85,
       duration: 1500,
       ease: 'Sine.easeInOut',
       yoyo: true,
       repeat: -1,
+    });
+
+    // Animate each rainbow layer with its offset preserved
+    yearLayers.forEach((layer, index) => {
+      const baseOffset = rainbowLayers[index].offsetY;
+      this.tweens.add({
+        targets: layer,
+        y: 85 + baseOffset,
+        duration: 1500,
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1,
+      });
     });
 
     // Pulsing glow effect

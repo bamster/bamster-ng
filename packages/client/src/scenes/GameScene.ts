@@ -127,6 +127,9 @@ export class GameScene extends Phaser.Scene {
   // Lights Out event state
   private lightsOutOverlay?: Phaser.GameObjects.Graphics;
 
+  // Ghost Blocks event state
+  private ghostBlocksActive: boolean = false;
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -1412,6 +1415,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private shouldBlocksCollide(block1: Block, block2: Block): boolean {
+    // Ghost Blocks event: falling blocks pass through each other
+    if (this.ghostBlocksActive) return false;
+
     // Only collide if one is resting and the other is falling
     if (block1.isResting === block2.isResting) return false;
 
@@ -2430,6 +2436,44 @@ export class GameScene extends Phaser.Scene {
           const block = child as Block;
           if (!block.isResting && block.y <= FRAME_WIDTH + BLOCK_SIZE / 2) {
             this.blockSpawner.landBlockOnCeiling(block);
+          }
+          return true;
+        });
+      },
+    });
+
+    // Ghost Blocks event - blocks pass through each other
+    this.eventManager.registerEvent({
+      id: 'ghost_blocks',
+      name: 'GHOST BLOCKS',
+      icon: '👻',
+      duration: 20000, // 20 seconds
+      onStart: (_scene) => {
+        this.ghostBlocksActive = true;
+        // Make all falling blocks semi-transparent
+        this.blockGroup.children.each((child) => {
+          const block = child as Block;
+          if (!block.isResting) {
+            block.setAlpha(0.5);
+          }
+          return true;
+        });
+      },
+      onEnd: (_scene) => {
+        this.ghostBlocksActive = false;
+        // Restore opacity for all blocks
+        this.blockGroup.children.each((child) => {
+          const block = child as Block;
+          block.setAlpha(1);
+          return true;
+        });
+      },
+      onUpdate: (_scene, _delta) => {
+        // Make newly spawned falling blocks semi-transparent
+        this.blockGroup.children.each((child) => {
+          const block = child as Block;
+          if (!block.isResting && block.alpha > 0.5) {
+            block.setAlpha(0.5);
           }
           return true;
         });

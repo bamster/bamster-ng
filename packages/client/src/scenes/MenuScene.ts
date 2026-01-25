@@ -41,14 +41,14 @@ export class MenuScene extends Phaser.Scene {
     }
 
     // Title with chrome/neon effect
-    const titleShadow = this.add.text(GAME_WIDTH / 2 + 4, 84, 'BAMSTER', {
+    const titleShadow = this.add.text(GAME_WIDTH / 2 + 4, 84, 'BAMster', {
       fontSize: '72px',
       fontFamily: 'monospace',
       color: '#330033',
     });
     titleShadow.setOrigin(0.5);
 
-    const title = this.add.text(GAME_WIDTH / 2, 80, 'BAMSTER', {
+    const title = this.add.text(GAME_WIDTH / 2, 80, 'BAMster', {
       fontSize: '72px',
       fontFamily: 'monospace',
       color: '#ff00ff',
@@ -58,7 +58,7 @@ export class MenuScene extends Phaser.Scene {
     title.setOrigin(0.5);
 
     // Glowing title effect
-    const titleGlow = this.add.text(GAME_WIDTH / 2, 80, 'BAMSTER', {
+    const titleGlow = this.add.text(GAME_WIDTH / 2, 80, 'BAMster', {
       fontSize: '72px',
       fontFamily: 'monospace',
       color: '#ff00ff',
@@ -94,6 +94,10 @@ export class MenuScene extends Phaser.Scene {
 
     this.createButton(GAME_WIDTH / 2, 530, '⚙ SETTINGS', () => {
       this.scene.start('SettingsScene');
+    });
+
+    this.createButton(GAME_WIDTH / 2, 590, '🏆 ACHIEVEMENTS', () => {
+      this.scene.start('AchievementsScene');
     });
 
     // Animate title with pulsing glow

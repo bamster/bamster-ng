@@ -26,6 +26,7 @@ export class LobbyScene extends Phaser.Scene {
   private inputCursor?: Phaser.GameObjects.Text;
   private buttons: Phaser.GameObjects.Container[] = [];
   private playerCountText?: Phaser.GameObjects.Text;
+  private dotsTimer?: Phaser.Time.TimerEvent;
 
   constructor() {
     super({ key: 'LobbyScene' });
@@ -37,6 +38,7 @@ export class LobbyScene extends Phaser.Scene {
     this.roomCodeInput = '';
     this.networkManager = undefined;
     this.buttons = [];
+    this.dotsTimer = undefined;
   }
 
   create(): void {
@@ -104,6 +106,11 @@ export class LobbyScene extends Phaser.Scene {
     this.inputText?.destroy();
     this.inputCursor?.destroy();
     this.playerCountText?.destroy();
+    // Stop dots animation timer
+    if (this.dotsTimer) {
+      this.dotsTimer.destroy();
+      this.dotsTimer = undefined;
+    }
   }
 
   private showMainMenu(): void {
@@ -237,11 +244,14 @@ export class LobbyScene extends Phaser.Scene {
     dots.setOrigin(0.5);
     this.buttons.push(dots as unknown as Phaser.GameObjects.Container);
 
-    this.time.addEvent({
+    this.dotsTimer = this.time.addEvent({
       delay: 300,
       callback: () => {
-        const dotCount = (dots.text.length % 3) + 1;
-        dots.setText('.'.repeat(dotCount));
+        // Check if text still exists before updating
+        if (dots.active) {
+          const dotCount = (dots.text.length % 3) + 1;
+          dots.setText('.'.repeat(dotCount));
+        }
       },
       loop: true,
     });

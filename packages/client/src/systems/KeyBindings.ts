@@ -11,6 +11,7 @@ export interface GameKeyBindings {
   player1: PlayerKeyBindings;
   player2: PlayerKeyBindings;
   pause: string;
+  screenshot: string;
 }
 
 // Phaser key code mappings
@@ -55,6 +56,7 @@ export const DEFAULT_BINDINGS: GameKeyBindings = {
     shoot: 'U',
   },
   pause: 'ESC',
+  screenshot: 'P',
 };
 
 const STORAGE_KEY = 'bamster_keybindings';

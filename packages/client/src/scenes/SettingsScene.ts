@@ -79,11 +79,10 @@ const DEFAULT_SETTINGS: GameSettings = {
 
 export class SettingsScene extends Phaser.Scene {
   private settings: GameSettings = { ...DEFAULT_SETTINGS };
-  private sliderGraphics!: Phaser.GameObjects.Graphics;
 
   // Key binding state
   private keyBindings!: GameKeyBindings;
-  private waitingForKey: { player: 'player1' | 'player2'; action: keyof PlayerKeyBindings } | null = null;
+  private waitingForKey: { player: 'player1' | 'player2'; action: keyof PlayerKeyBindings } | { global: 'screenshot' } | null = null;
   private keyBindingTexts: Map<string, Phaser.GameObjects.Text> = new Map();
   private keyBindingOverlay?: Phaser.GameObjects.Container;
 
@@ -137,70 +136,69 @@ export class SettingsScene extends Phaser.Scene {
     });
     title.setOrigin(0.5);
 
-    // Graphics for sliders
-    this.sliderGraphics = this.add.graphics();
-
-    // Volume section
-    this.add.text(GAME_WIDTH / 2, 110, '─── AUDIO ───', {
-      fontSize: '16px',
-      fontFamily: 'monospace',
-      color: '#00ffff',
-    }).setOrigin(0.5);
-
-    // Volume sliders
-    this.createSlider(GAME_WIDTH / 2, 150, 'MASTER VOLUME', 'masterVolume');
-    this.createSlider(GAME_WIDTH / 2, 200, 'MUSIC VOLUME', 'musicVolume');
-    this.createSlider(GAME_WIDTH / 2, 250, 'SFX VOLUME', 'sfxVolume');
+    // Audio settings button (opens sub-menu)
+    this.createMenuButton(GAME_WIDTH / 2, 115, 'AUDIO SETTINGS ►', () => {
+      this.saveSettings();
+      this.scene.start('AudioSettingsScene');
+    });
 
     // Difficulty section
-    this.add.text(GAME_WIDTH / 2, 300, '─── DIFFICULTY ───', {
+    this.add.text(GAME_WIDTH / 2, 170, '─── DIFFICULTY ───', {
       fontSize: '16px',
       fontFamily: 'monospace',
       color: '#00ffff',
     }).setOrigin(0.5);
 
-    this.createDifficultySelector(GAME_WIDTH / 2, 340);
+    this.createDifficultySelector(GAME_WIDTH / 2, 210);
 
     // Sprite style section
-    this.add.text(GAME_WIDTH / 2, 385, '─── SPRITE STYLE ───', {
+    this.add.text(GAME_WIDTH / 2, 265, '─── SPRITE STYLE ───', {
       fontSize: '16px',
       fontFamily: 'monospace',
       color: '#00ffff',
     }).setOrigin(0.5);
 
-    this.createSpriteStyleSelector(GAME_WIDTH / 2, 420);
+    this.createSpriteStyleSelector(GAME_WIDTH / 2, 305);
 
     // Controls section
-    this.add.text(GAME_WIDTH / 2, 465, '─── CONTROLS (click to rebind) ───', {
+    this.add.text(GAME_WIDTH / 2, 360, '─── CONTROLS (click to rebind) ───', {
       fontSize: '14px',
       fontFamily: 'monospace',
       color: '#00ffff',
     }).setOrigin(0.5);
 
     // Player 1 controls
-    this.add.text(GAME_WIDTH / 2 - 180, 490, 'P1:', {
-      fontSize: '12px',
+    this.add.text(GAME_WIDTH / 2 - 180, 395, 'P1:', {
+      fontSize: '14px',
       fontFamily: 'monospace',
       color: '#ff00ff',
     });
-    this.createKeyBinding(GAME_WIDTH / 2 - 120, 490, 'LEFT', 'player1', 'left');
-    this.createKeyBinding(GAME_WIDTH / 2 - 50, 490, 'RIGHT', 'player1', 'right');
-    this.createKeyBinding(GAME_WIDTH / 2 + 20, 490, 'JUMP', 'player1', 'jump');
-    this.createKeyBinding(GAME_WIDTH / 2 + 100, 490, 'SHOOT', 'player1', 'shoot');
+    this.createKeyBinding(GAME_WIDTH / 2 - 110, 395, 'LEFT', 'player1', 'left');
+    this.createKeyBinding(GAME_WIDTH / 2 - 35, 395, 'RIGHT', 'player1', 'right');
+    this.createKeyBinding(GAME_WIDTH / 2 + 40, 395, 'JUMP', 'player1', 'jump');
+    this.createKeyBinding(GAME_WIDTH / 2 + 125, 395, 'SHOOT', 'player1', 'shoot');
 
     // Player 2 controls
-    this.add.text(GAME_WIDTH / 2 - 180, 525, 'P2:', {
-      fontSize: '12px',
+    this.add.text(GAME_WIDTH / 2 - 180, 445, 'P2:', {
+      fontSize: '14px',
       fontFamily: 'monospace',
       color: '#00ffff',
     });
-    this.createKeyBinding(GAME_WIDTH / 2 - 120, 525, 'LEFT', 'player2', 'left');
-    this.createKeyBinding(GAME_WIDTH / 2 - 50, 525, 'RIGHT', 'player2', 'right');
-    this.createKeyBinding(GAME_WIDTH / 2 + 20, 525, 'JUMP', 'player2', 'jump');
-    this.createKeyBinding(GAME_WIDTH / 2 + 100, 525, 'SHOOT', 'player2', 'shoot');
+    this.createKeyBinding(GAME_WIDTH / 2 - 110, 445, 'LEFT', 'player2', 'left');
+    this.createKeyBinding(GAME_WIDTH / 2 - 35, 445, 'RIGHT', 'player2', 'right');
+    this.createKeyBinding(GAME_WIDTH / 2 + 40, 445, 'JUMP', 'player2', 'jump');
+    this.createKeyBinding(GAME_WIDTH / 2 + 125, 445, 'SHOOT', 'player2', 'shoot');
+
+    // Screenshot key binding
+    this.add.text(GAME_WIDTH / 2 - 180, 480, 'SCREENSHOT:', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#ffff00',
+    });
+    this.createGlobalKeyBinding(GAME_WIDTH / 2 - 60, 480, 'screenshot');
 
     // Reset to defaults button
-    this.createSmallButton(GAME_WIDTH / 2, 555, 'RESET TO DEFAULTS', () => {
+    this.createSmallButton(GAME_WIDTH / 2, 515, 'RESET CONTROLS', () => {
       this.keyBindings = resetKeyBindings();
       this.updateAllKeyBindingTexts();
     });
@@ -218,7 +216,12 @@ export class SettingsScene extends Phaser.Scene {
           return;
         }
 
-        this.keyBindings[this.waitingForKey.player][this.waitingForKey.action] = keyStr;
+        // Handle global bindings (like screenshot)
+        if ('global' in this.waitingForKey) {
+          this.keyBindings[this.waitingForKey.global] = keyStr;
+        } else {
+          this.keyBindings[this.waitingForKey.player][this.waitingForKey.action] = keyStr;
+        }
         saveKeyBindings(this.keyBindings);
         this.updateAllKeyBindingTexts();
         this.hideKeyBindingOverlay();
@@ -231,120 +234,46 @@ export class SettingsScene extends Phaser.Scene {
       this.saveSettings();
       this.scene.start('MenuScene');
     });
-
-    // Render initial slider states
-    this.renderSliders();
   }
 
-  private createSlider(
+
+  private createMenuButton(
     x: number,
     y: number,
-    label: string,
-    settingKey: keyof GameSettings
-  ): void {
-    const sliderWidth = 200;
-    const sliderHeight = 20;
-    const sliderX = x - sliderWidth / 2;
+    text: string,
+    onClick: () => void
+  ): Phaser.GameObjects.Container {
+    const container = this.add.container(x, y);
 
-    // Label
-    this.add.text(x, y - 20, label, {
-      fontSize: '14px',
+    const bg = this.add.rectangle(0, 0, 280, 40, COLORS.darkPurple);
+    bg.setStrokeStyle(2, COLORS.neonPink);
+
+    const label = this.add.text(0, 0, text, {
+      fontSize: '18px',
       fontFamily: 'monospace',
       color: '#ffffff',
-    }).setOrigin(0.5);
+    });
+    label.setOrigin(0.5);
 
-    // Create interactive zone for the slider
-    const hitZone = this.add.rectangle(x, y, sliderWidth + 20, sliderHeight + 20, 0x000000, 0);
-    hitZone.setInteractive({ useHandCursor: true });
+    container.add([bg, label]);
+    container.setSize(280, 40);
+    container.setInteractive({ useHandCursor: true });
 
-    // Store slider data
-    hitZone.setData('settingKey', settingKey);
-    hitZone.setData('sliderX', sliderX);
-    hitZone.setData('sliderWidth', sliderWidth);
-    hitZone.setData('sliderY', y);
-
-    // Handle pointer events
-    hitZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      this.updateSliderValue(hitZone, pointer.x);
+    container.on('pointerover', () => {
+      bg.setFillStyle(0x4a1a6a);
+      bg.setStrokeStyle(3, COLORS.neonCyan);
+      label.setColor('#00ffff');
     });
 
-    hitZone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.isDown) {
-        this.updateSliderValue(hitZone, pointer.x);
-      }
-    });
-  }
-
-  private updateSliderValue(hitZone: Phaser.GameObjects.Rectangle, pointerX: number): void {
-    const settingKey = hitZone.getData('settingKey') as 'masterVolume' | 'musicVolume' | 'sfxVolume';
-    const sliderX = hitZone.getData('sliderX') as number;
-    const sliderWidth = hitZone.getData('sliderWidth') as number;
-
-    // Calculate value (0-1)
-    let value = (pointerX - sliderX) / sliderWidth;
-    value = Phaser.Math.Clamp(value, 0, 1);
-
-    // Update setting
-    this.settings[settingKey] = value;
-
-    // Re-render sliders
-    this.renderSliders();
-  }
-
-  private renderSliders(): void {
-    this.sliderGraphics.clear();
-
-    const sliderWidth = 200;
-    const sliderHeight = 12;
-    const handleWidth = 8;
-
-    const sliders: { key: 'masterVolume' | 'musicVolume' | 'sfxVolume'; y: number }[] = [
-      { key: 'masterVolume', y: 150 },
-      { key: 'musicVolume', y: 200 },
-      { key: 'sfxVolume', y: 250 },
-    ];
-
-    sliders.forEach(({ key, y }) => {
-      const sliderX = GAME_WIDTH / 2 - sliderWidth / 2;
-      const value = this.settings[key];
-
-      // Slider track (background)
-      this.sliderGraphics.fillStyle(COLORS.darkPurple, 1);
-      this.sliderGraphics.fillRect(sliderX, y - sliderHeight / 2, sliderWidth, sliderHeight);
-
-      // Slider track border
-      this.sliderGraphics.lineStyle(2, COLORS.neonPink, 0.8);
-      this.sliderGraphics.strokeRect(sliderX, y - sliderHeight / 2, sliderWidth, sliderHeight);
-
-      // Filled portion
-      const fillWidth = value * sliderWidth;
-      this.sliderGraphics.fillStyle(COLORS.neonCyan, 0.6);
-      this.sliderGraphics.fillRect(sliderX + 2, y - sliderHeight / 2 + 2, fillWidth - 4, sliderHeight - 4);
-
-      // Handle
-      const handleX = sliderX + fillWidth - handleWidth / 2;
-      this.sliderGraphics.fillStyle(COLORS.neonYellow, 1);
-      this.sliderGraphics.fillRect(handleX, y - sliderHeight / 2 - 2, handleWidth, sliderHeight + 4);
+    container.on('pointerout', () => {
+      bg.setFillStyle(COLORS.darkPurple);
+      bg.setStrokeStyle(2, COLORS.neonPink);
+      label.setColor('#ffffff');
     });
 
-    // Add percentage texts (recreate each time)
-    this.children.each((child) => {
-      if (child instanceof Phaser.GameObjects.Text && child.getData('isPercentage')) {
-        child.destroy();
-      }
-      return true;
-    });
+    container.on('pointerdown', onClick);
 
-    sliders.forEach(({ key, y }) => {
-      const value = this.settings[key];
-      const percentText = this.add.text(GAME_WIDTH / 2 + 120, y, `${Math.round(value * 100)}%`, {
-        fontSize: '14px',
-        fontFamily: 'monospace',
-        color: '#ffff00',
-      });
-      percentText.setOrigin(0, 0.5);
-      percentText.setData('isPercentage', true);
-    });
+    return container;
   }
 
   private difficultyButtons: Phaser.GameObjects.Container[] = [];
@@ -613,10 +542,49 @@ export class SettingsScene extends Phaser.Scene {
     });
   }
 
+  private createGlobalKeyBinding(
+    x: number,
+    y: number,
+    binding: 'screenshot'
+  ): void {
+    // Key display (clickable)
+    const keyText = this.add.text(x, y, getKeyDisplayName(this.keyBindings[binding]), {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: '#ffff00',
+      backgroundColor: '#2a0a4a',
+      padding: { x: 8, y: 4 },
+    });
+    keyText.setOrigin(0, 0.5);
+    keyText.setInteractive({ useHandCursor: true });
+
+    // Store reference for updates
+    this.keyBindingTexts.set(`global_${binding}`, keyText);
+
+    // Hover effects
+    keyText.on('pointerover', () => {
+      keyText.setStyle({ color: '#00ffff', backgroundColor: '#4a1a6a' });
+    });
+    keyText.on('pointerout', () => {
+      keyText.setStyle({ color: '#ffff00', backgroundColor: '#2a0a4a' });
+    });
+
+    // Click to rebind
+    keyText.on('pointerdown', () => {
+      this.waitingForKey = { global: binding };
+      this.showKeyBindingOverlay('SCREENSHOT');
+    });
+  }
+
   private updateAllKeyBindingTexts(): void {
     this.keyBindingTexts.forEach((text, key) => {
-      const [player, action] = key.split('_') as ['player1' | 'player2', keyof PlayerKeyBindings];
-      text.setText(getKeyDisplayName(this.keyBindings[player][action]));
+      if (key.startsWith('global_')) {
+        const binding = key.replace('global_', '') as 'screenshot';
+        text.setText(getKeyDisplayName(this.keyBindings[binding]));
+      } else {
+        const [player, action] = key.split('_') as ['player1' | 'player2', keyof PlayerKeyBindings];
+        text.setText(getKeyDisplayName(this.keyBindings[player][action]));
+      }
     });
   }
 

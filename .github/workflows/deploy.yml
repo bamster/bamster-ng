@@ -41,6 +41,9 @@ jobs:
       - name: Build client
         run: pnpm --filter @bamster/client build
 
+      - name: Add .nojekyll file
+        run: touch packages/client/dist/.nojekyll
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 

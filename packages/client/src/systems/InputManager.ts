@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, PLAY_AREA_WIDTH } from '@bamster/shared';
+import { loadKeyBindings, type GameKeyBindings } from './KeyBindings';
 
 export interface PlayerInputState {
   left: boolean;
@@ -10,24 +11,27 @@ export interface PlayerInputState {
 
 export class InputManager {
   private scene: Phaser.Scene;
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private bindings: GameKeyBindings;
+
+  // Player 1 keys (configurable)
+  private p1Left!: Phaser.Input.Keyboard.Key;
+  private p1Right!: Phaser.Input.Keyboard.Key;
+  private p1Jump!: Phaser.Input.Keyboard.Key;
+  private p1Shoot!: Phaser.Input.Keyboard.Key;
+
+  // WASD as alternate player 1 keys (always enabled)
   private wasd!: {
     W: Phaser.Input.Keyboard.Key;
     A: Phaser.Input.Keyboard.Key;
     S: Phaser.Input.Keyboard.Key;
     D: Phaser.Input.Keyboard.Key;
   };
-  private shootKey!: Phaser.Input.Keyboard.Key;
-  private spaceKey!: Phaser.Input.Keyboard.Key;
 
-  // Player 2 keys
-  private p2Keys!: {
-    I: Phaser.Input.Keyboard.Key;
-    J: Phaser.Input.Keyboard.Key;
-    K: Phaser.Input.Keyboard.Key;
-    L: Phaser.Input.Keyboard.Key;
-    U: Phaser.Input.Keyboard.Key;
-  };
+  // Player 2 keys (configurable)
+  private p2Left!: Phaser.Input.Keyboard.Key;
+  private p2Right!: Phaser.Input.Keyboard.Key;
+  private p2Jump!: Phaser.Input.Keyboard.Key;
+  private p2Shoot!: Phaser.Input.Keyboard.Key;
 
   // Mouse/touch input
   private isMouseDown: boolean = false;
@@ -47,8 +51,12 @@ export class InputManager {
   private shootPressed: boolean = false;
   private jumpJustPressed: boolean = false;
 
+  // Event system controls
+  private mirrorMode: boolean = false;
+
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+    this.bindings = loadKeyBindings();
     this.setupInputs();
 
     // Detect touch device
@@ -59,14 +67,33 @@ export class InputManager {
     }
   }
 
+  private getKeyCode(key: string): number {
+    const KeyCodes = Phaser.Input.Keyboard.KeyCodes;
+    // Check if it's a direct KeyCode name
+    if (key in KeyCodes) {
+      return (KeyCodes as Record<string, number>)[key];
+    }
+    // Single letter keys (A-Z)
+    if (key.length === 1) {
+      const charCode = key.charCodeAt(0);
+      if (charCode >= 65 && charCode <= 90) {
+        return charCode;
+      }
+    }
+    return 0;
+  }
+
   private setupInputs(): void {
     const keyboard = this.scene.input.keyboard;
     if (!keyboard) return;
 
-    // Cursor keys (arrows)
-    this.cursors = keyboard.createCursorKeys();
+    // Player 1 configurable keys
+    this.p1Left = keyboard.addKey(this.getKeyCode(this.bindings.player1.left));
+    this.p1Right = keyboard.addKey(this.getKeyCode(this.bindings.player1.right));
+    this.p1Jump = keyboard.addKey(this.getKeyCode(this.bindings.player1.jump));
+    this.p1Shoot = keyboard.addKey(this.getKeyCode(this.bindings.player1.shoot));
 
-    // WASD keys
+    // WASD as alternate keys (always available)
     this.wasd = {
       W: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
       A: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
@@ -74,20 +101,11 @@ export class InputManager {
       D: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
 
-    // Shoot key (Space)
-    this.spaceKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-
-    // Additional shoot key (Z)
-    this.shootKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
-
-    // Player 2 keys
-    this.p2Keys = {
-      I: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I),
-      J: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J),
-      K: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K),
-      L: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L),
-      U: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.U),
-    };
+    // Player 2 configurable keys
+    this.p2Left = keyboard.addKey(this.getKeyCode(this.bindings.player2.left));
+    this.p2Right = keyboard.addKey(this.getKeyCode(this.bindings.player2.right));
+    this.p2Jump = keyboard.addKey(this.getKeyCode(this.bindings.player2.jump));
+    this.p2Shoot = keyboard.addKey(this.getKeyCode(this.bindings.player2.shoot));
 
     // Mouse input (only for non-touch devices to avoid conflicts)
     if (!this.scene.sys.game.device.input.touch) {
@@ -257,34 +275,61 @@ export class InputManager {
     // Reset jump just pressed flag after reading
     this.jumpJustPressed = false;
 
+    // Base input states
+    const leftInput = this.p1Left.isDown || this.wasd.A.isDown || touchLeft;
+    const rightInput = this.p1Right.isDown || this.wasd.D.isDown || touchRight;
+
+    // Apply mirror mode (swap left/right)
     return {
-      left: this.cursors.left.isDown || this.wasd.A.isDown || touchLeft,
-      right: this.cursors.right.isDown || this.wasd.D.isDown || touchRight,
+      left: this.mirrorMode ? rightInput : leftInput,
+      right: this.mirrorMode ? leftInput : rightInput,
       jump:
-        Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
+        Phaser.Input.Keyboard.JustDown(this.p1Jump) ||
         Phaser.Input.Keyboard.JustDown(this.wasd.W) ||
         touchJump,
-      shoot: this.spaceKey.isDown || this.shootKey.isDown || this.isMouseDown || touchShoot,
+      shoot: this.p1Shoot.isDown || this.isMouseDown || touchShoot,
     };
   }
 
   getPlayer2Input(): PlayerInputState {
+    // Base input states
+    const leftInput = this.p2Left.isDown;
+    const rightInput = this.p2Right.isDown;
+
+    // Apply mirror mode (swap left/right)
     return {
-      left: this.p2Keys.J.isDown,
-      right: this.p2Keys.L.isDown,
-      jump: Phaser.Input.Keyboard.JustDown(this.p2Keys.I),
-      shoot: this.p2Keys.U.isDown,
+      left: this.mirrorMode ? rightInput : leftInput,
+      right: this.mirrorMode ? leftInput : rightInput,
+      jump: Phaser.Input.Keyboard.JustDown(this.p2Jump),
+      shoot: this.p2Shoot.isDown,
     };
   }
 
   isJumpJustPressed(playerId: 'player1' | 'player2'): boolean {
     if (playerId === 'player1') {
       return (
-        Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
+        Phaser.Input.Keyboard.JustDown(this.p1Jump) ||
         Phaser.Input.Keyboard.JustDown(this.wasd.W)
       );
     } else {
-      return Phaser.Input.Keyboard.JustDown(this.p2Keys.I);
+      return Phaser.Input.Keyboard.JustDown(this.p2Jump);
     }
+  }
+
+  // Reload bindings (call after settings change)
+  reloadBindings(): void {
+    this.bindings = loadKeyBindings();
+    // Note: Keys would need to be re-added, but that requires scene restart
+    // For now, bindings take effect on next scene start
+  }
+
+  // Set mirror mode (for Mirror Mode event - reverses left/right)
+  setMirrorMode(enabled: boolean): void {
+    this.mirrorMode = enabled;
+  }
+
+  // Check if mirror mode is active
+  isMirrorModeActive(): boolean {
+    return this.mirrorMode;
   }
 }

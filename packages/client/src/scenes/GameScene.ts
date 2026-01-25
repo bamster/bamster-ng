@@ -2231,6 +2231,22 @@ export class GameScene extends Phaser.Scene {
         this.blockSpawner.setPowerUpOnlyMode(false);
       },
     });
+
+    // Mirror Mode event - controls are reversed
+    this.eventManager.registerEvent({
+      id: 'mirror_mode',
+      name: 'MIRROR MODE',
+      icon: '🪞',
+      duration: 20000, // 20 seconds
+      onStart: (_scene) => {
+        // Enable mirror mode in input manager
+        this.inputManager.setMirrorMode(true);
+      },
+      onEnd: (_scene) => {
+        // Disable mirror mode
+        this.inputManager.setMirrorMode(false);
+      },
+    });
   }
 
   /**

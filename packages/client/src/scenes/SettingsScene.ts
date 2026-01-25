@@ -51,6 +51,7 @@ interface GameSettings {
   musicVolume: number;
   sfxVolume: number;
   difficulty: Difficulty;
+  debugMode: boolean;
 }
 
 const DEFAULT_SETTINGS: GameSettings = {
@@ -58,6 +59,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   musicVolume: 0.7,
   sfxVolume: 0.8,
   difficulty: 'normal',
+  debugMode: false,
 };
 
 export class SettingsScene extends Phaser.Scene {
@@ -452,4 +454,28 @@ export function getGameSettings(): GameSettings {
     // Ignore
   }
   return { ...DEFAULT_SETTINGS };
+}
+
+// Check if debug mode is enabled (from settings or URL param)
+export function isDebugMode(): boolean {
+  // Check URL parameter first (takes precedence)
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('debug') === 'true') {
+      return true;
+    }
+  }
+  return getGameSettings().debugMode;
+}
+
+// Toggle debug mode and save to settings
+export function toggleDebugMode(): boolean {
+  const settings = getGameSettings();
+  settings.debugMode = !settings.debugMode;
+  try {
+    localStorage.setItem('bamster_settings', JSON.stringify(settings));
+  } catch {
+    // Ignore localStorage errors
+  }
+  return settings.debugMode;
 }

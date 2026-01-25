@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BLOCK_SIZE, BLOCK_FALL_SPEED, GAME_HEIGHT, BLOCK_HP, FRAME_WIDTH } from '@bamster/shared';
 import type { BlockColor } from '@bamster/shared';
+import { isDebugMode } from '../systems/DebugManager';
 
 export class Block extends Phaser.Physics.Arcade.Sprite {
   public blockId: string;
@@ -43,6 +44,9 @@ export class Block extends Phaser.Physics.Arcade.Sprite {
   }
 
   private createHpIndicator(): void {
+    // Only show HP indicator in debug mode
+    if (!isDebugMode()) return;
+
     this.hpText = this.scene.add.text(this.x, this.y, `${this.hp}`, {
       fontSize: '14px',
       fontFamily: 'monospace',
@@ -122,6 +126,26 @@ export class Block extends Phaser.Physics.Arcade.Sprite {
 
   mergeIntoCluster(clusterId: string): void {
     this.clusterId = clusterId;
+  }
+
+  /** Update HP indicator visibility based on current debug mode setting */
+  updateDebugDisplay(debugEnabled: boolean): void {
+    if (debugEnabled && !this.hpText) {
+      // Create HP indicator if debug mode enabled
+      this.hpText = this.scene.add.text(this.x, this.y, `${this.hp}`, {
+        fontSize: '14px',
+        fontFamily: 'monospace',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 2,
+      });
+      this.hpText.setOrigin(0.5);
+      this.hpText.setDepth(10);
+    } else if (!debugEnabled && this.hpText) {
+      // Remove HP indicator if debug mode disabled
+      this.hpText.destroy();
+      this.hpText = undefined;
+    }
   }
 
   update(): void {

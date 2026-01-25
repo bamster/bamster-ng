@@ -26,6 +26,7 @@ import {
   type BlockNetState,
 } from '../systems/NetworkManager';
 import { getSound } from '../systems/SoundManager';
+import { getDebugManager, isDebugMode } from '../systems/DebugManager';
 import { getGameSettings, DIFFICULTY_CONFIGS } from './SettingsScene';
 
 // 80s color palette
@@ -132,6 +133,9 @@ export class GameScene extends Phaser.Scene {
 
   // Earthquake event state
   private earthquakeTimer?: Phaser.Time.TimerEvent;
+
+  // Debug mode UI
+  private debugLabel?: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -267,6 +271,12 @@ export class GameScene extends Phaser.Scene {
     // Setup pause key
     this.input.keyboard?.on('keydown-ESC', () => this.togglePause());
     this.input.keyboard?.on('keydown-P', () => this.togglePause());
+
+    // Setup debug mode toggle (F3)
+    this.input.keyboard?.on('keydown-F3', () => this.toggleDebugMode());
+
+    // Create debug indicator (hidden by default, shown if debug mode active)
+    this.createDebugIndicator();
   }
 
   private togglePause(): void {
@@ -277,6 +287,38 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.pauseGame();
     }
+  }
+
+  /** Create the DEBUG indicator label (hidden by default) */
+  private createDebugIndicator(): void {
+    this.debugLabel = this.add.text(PLAY_AREA_WIDTH - 10, 10, 'DEBUG', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#ff00ff',
+      backgroundColor: '#000000',
+      padding: { x: 4, y: 2 },
+    });
+    this.debugLabel.setOrigin(1, 0); // Right-aligned
+    this.debugLabel.setDepth(200);
+    this.debugLabel.setVisible(isDebugMode());
+  }
+
+  /** Toggle debug mode and update all blocks' HP visibility */
+  private toggleDebugMode(): void {
+    const debugManager = getDebugManager();
+    const newState = debugManager.toggle();
+
+    // Update debug label visibility
+    if (this.debugLabel) {
+      this.debugLabel.setVisible(newState);
+    }
+
+    // Update all existing blocks to show/hide HP
+    this.blockGroup.getChildren().forEach((child) => {
+      if (child instanceof Block) {
+        child.updateDebugDisplay(newState);
+      }
+    });
   }
 
   private pauseGame(): void {
@@ -2348,7 +2390,7 @@ export class GameScene extends Phaser.Scene {
     // Super Bamster event - invincibility + double jump
     this.eventManager.registerEvent({
       id: 'super_bamster',
-      name: 'SUPER BAMSTER',
+      name: 'SUPER BAMster',
       icon: '⭐',
       duration: 15000, // 15 seconds
       onStart: (_scene) => {

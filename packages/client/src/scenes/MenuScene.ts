@@ -76,13 +76,13 @@ export class MenuScene extends Phaser.Scene {
     subtitle.setOrigin(0.5);
 
     // BAMster preview on the left side
-    const bamster = this.add.image(100, GAME_HEIGHT / 2 + 40, 'bamster');
-    bamster.setScale(3.5);
+    const bamster = this.add.image(110, GAME_HEIGHT / 2 + 50, 'bamster');
+    bamster.setScale(5);
 
     // Add a gentle floating animation to BAMster
     this.tweens.add({
       targets: bamster,
-      y: GAME_HEIGHT / 2 + 50,
+      y: GAME_HEIGHT / 2 + 60,
       duration: 2000,
       ease: 'Sine.easeInOut',
       yoyo: true,

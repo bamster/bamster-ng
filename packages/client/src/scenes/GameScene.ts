@@ -2248,6 +2248,22 @@ export class GameScene extends Phaser.Scene {
       },
     });
 
+    // Block Rain event - blocks fall 2.5x faster
+    this.eventManager.registerEvent({
+      id: 'block_rain',
+      name: 'BLOCK RAIN',
+      icon: '⚡',
+      duration: 20000, // 20 seconds
+      onStart: (_scene) => {
+        // Speed up block falling
+        this.blockSpawner.setFallSpeedMultiplier(2.5);
+      },
+      onEnd: (_scene) => {
+        // Reset to normal speed
+        this.blockSpawner.setFallSpeedMultiplier(1.0);
+      },
+    });
+
     // Unlimited Ammo event - rapid fire with no cooldown
     this.eventManager.registerEvent({
       id: 'unlimited_ammo',

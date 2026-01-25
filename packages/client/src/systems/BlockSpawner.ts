@@ -50,6 +50,7 @@ export class BlockSpawner {
 
   // Event system controls
   private powerUpOnlyMode: boolean = false;
+  private fallSpeedMultiplier: number = 1.0;
 
   constructor(
     scene: Phaser.Scene,
@@ -80,6 +81,24 @@ export class BlockSpawner {
   // Set power-up only mode (for Power-Up Shower event)
   setPowerUpOnlyMode(enabled: boolean): void {
     this.powerUpOnlyMode = enabled;
+  }
+
+  // Set fall speed multiplier (for Block Rain event)
+  setFallSpeedMultiplier(multiplier: number): void {
+    this.fallSpeedMultiplier = multiplier;
+    // Update existing falling blocks
+    this.blockGroup.children.each((block) => {
+      const b = block as Block;
+      if (!b.isResting) {
+        b.setFallSpeed(this.getEffectiveFallSpeed());
+      }
+      return true;
+    });
+  }
+
+  // Get effective fall speed (base speed * multiplier)
+  private getEffectiveFallSpeed(): number {
+    return this.currentFallSpeed * this.fallSpeedMultiplier;
   }
 
   // Get cluster HP
@@ -235,7 +254,7 @@ export class BlockSpawner {
       Phaser.Math.Between(0, BLOCK_COLORS.length - 1)
     ] as BlockColor;
     const block = new Block(this.scene, x, y, color);
-    block.setFallSpeed(this.currentFallSpeed);
+    block.setFallSpeed(this.getEffectiveFallSpeed());
     this.blockGroup.add(block);
 
     // Initialize cluster HP for the new block (so it has proper HP while falling)
@@ -285,7 +304,7 @@ export class BlockSpawner {
     this.blockGroup.children.each((block) => {
       const b = block as Block;
       if (!b.isResting) {
-        b.setFallSpeed(this.currentFallSpeed);
+        b.setFallSpeed(this.getEffectiveFallSpeed());
       }
       return true;
     });
@@ -445,7 +464,7 @@ export class BlockSpawner {
         block.isResting = false;
         const body = block.body as Phaser.Physics.Arcade.Body;
         body.setImmovable(false);
-        body.setVelocityY(this.currentFallSpeed);
+        body.setVelocityY(this.getEffectiveFallSpeed());
       }
     });
   }

@@ -2215,6 +2215,22 @@ export class GameScene extends Phaser.Scene {
         });
       },
     });
+
+    // Power-Up Shower event - only power-ups spawn
+    this.eventManager.registerEvent({
+      id: 'powerup_shower',
+      name: 'POWER-UP SHOWER',
+      icon: '🎁',
+      duration: 10000, // 10 seconds
+      onStart: (_scene) => {
+        // Enable power-up only mode in block spawner
+        this.blockSpawner.setPowerUpOnlyMode(true);
+      },
+      onEnd: (_scene) => {
+        // Disable power-up only mode
+        this.blockSpawner.setPowerUpOnlyMode(false);
+      },
+    });
   }
 
   /**

@@ -48,6 +48,9 @@ export class BlockSpawner {
   // Callback to get current player score (for score-based power-up guarantee)
   private getScoreCallback?: () => number;
 
+  // Event system controls
+  private powerUpOnlyMode: boolean = false;
+
   constructor(
     scene: Phaser.Scene,
     blockGroup: Phaser.Physics.Arcade.Group,
@@ -72,6 +75,11 @@ export class BlockSpawner {
   // Set callback to get current player score
   setScoreCallback(callback: () => number): void {
     this.getScoreCallback = callback;
+  }
+
+  // Set power-up only mode (for Power-Up Shower event)
+  setPowerUpOnlyMode(enabled: boolean): void {
+    this.powerUpOnlyMode = enabled;
   }
 
   // Get cluster HP
@@ -172,6 +180,12 @@ export class BlockSpawner {
     // Determine if we should spawn a power-up
     let shouldSpawnPowerUp = false;
     let spawnReason = '';
+
+    // Power-Up Shower event: 100% power-up spawn rate
+    if (this.powerUpOnlyMode) {
+      shouldSpawnPowerUp = true;
+      spawnReason = 'powerUpOnlyMode (event active)';
+    }
 
     // Score-based guarantee: if player has 200+ points and no power-up has spawned yet
     const currentScore = this.getScoreCallback ? this.getScoreCallback() : 0;

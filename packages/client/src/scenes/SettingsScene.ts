@@ -80,6 +80,7 @@ const DEFAULT_SETTINGS: GameSettings = {
 export class SettingsScene extends Phaser.Scene {
   private settings: GameSettings = { ...DEFAULT_SETTINGS };
 
+
   // Key binding state
   private keyBindings!: GameKeyBindings;
   private waitingForKey: { player: 'player1' | 'player2'; action: keyof PlayerKeyBindings } | { global: 'screenshot' } | null = null;

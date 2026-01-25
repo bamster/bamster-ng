@@ -9,6 +9,7 @@ import {
   BAMSTER_JUMP_VELOCITY,
   GRAVITY,
   BAMSTER_STARTING_HEALTH,
+  MAX_COMBO_MULTIPLIER,
 } from '@bamster/shared';
 import type { BlockColor } from '@bamster/shared';
 import type { GameMode } from './MenuScene';
@@ -28,6 +29,10 @@ import {
 import { getSound } from '../systems/SoundManager';
 import { getDebugManager, isDebugMode } from '../systems/DebugManager';
 import { getGameSettings, DIFFICULTY_CONFIGS } from './SettingsScene';
+import { getAchievements } from '../systems/AchievementManager';
+import { getGameStats } from '../systems/GameStats';
+import { AchievementPopup } from '../ui/AchievementPopup';
+import { ALL_ACHIEVEMENTS } from '../data/achievements';
 
 // 80s color palette
 const COLORS = {
@@ -143,6 +148,10 @@ export class GameScene extends Phaser.Scene {
   // Debug mode UI
   private debugLabel?: Phaser.GameObjects.Text;
 
+  // Achievement system
+  private achievementPopup?: AchievementPopup;
+  private achievementUnsubscribe?: () => void;
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -194,6 +203,12 @@ export class GameScene extends Phaser.Scene {
     this.parallaxGridOffset = 0;
     this.starGraphics = undefined;
     this.gridGraphics = undefined;
+
+    // Clean up achievement subscription from previous scene run
+    if (this.achievementUnsubscribe) {
+      this.achievementUnsubscribe();
+      this.achievementUnsubscribe = undefined;
+    }
   }
 
   create(): void {
@@ -283,6 +298,9 @@ export class GameScene extends Phaser.Scene {
 
     // Create debug indicator (hidden by default, shown if debug mode active)
     this.createDebugIndicator();
+
+    // Setup achievement system
+    this.setupAchievementSystem();
   }
 
   private togglePause(): void {
@@ -323,6 +341,34 @@ export class GameScene extends Phaser.Scene {
     this.blockGroup.getChildren().forEach((child) => {
       if (child instanceof Block) {
         child.updateDebugDisplay(newState);
+      }
+    });
+  }
+
+  /**
+   * Setup achievement system - register achievements, start stats session, connect popup
+   */
+  private setupAchievementSystem(): void {
+    // Register all achievement definitions
+    const achievements = getAchievements();
+    achievements.registerAchievements(ALL_ACHIEVEMENTS);
+
+    // Start a new game stats session
+    const stats = getGameStats();
+    stats.startSession(BAMSTER_STARTING_HEALTH);
+
+    // Create achievement popup for displaying unlock notifications
+    this.achievementPopup = new AchievementPopup(this);
+
+    // Connect achievement manager to popup - show popup when achievement unlocks
+    this.achievementUnsubscribe = achievements.onUnlock((achievement) => {
+      this.achievementPopup?.show(achievement);
+    });
+
+    // Clean up achievement subscription when scene shuts down
+    this.events.once('shutdown', () => {
+      if (this.achievementUnsubscribe) {
+        this.achievementUnsubscribe();
       }
     });
   }
@@ -1405,6 +1451,9 @@ export class GameScene extends Phaser.Scene {
     const blockBody = block.body as Phaser.Physics.Arcade.Body;
     if (blockBody.velocity.y <= 0) return;
 
+    // Track damage for achievements
+    getGameStats().recordDamageTaken();
+
     const died = player.takeDamage();
     if (died) {
       this.checkGameOver();
@@ -1520,9 +1569,20 @@ export class GameScene extends Phaser.Scene {
       // Emit particle effect for block destruction
       this.createBlockExplosion(block.x, block.y, block.color);
 
-      // Increment combo and apply multiplier
+      // Track block destroyed for achievements
+      const stats = getGameStats();
+      stats.recordBlockDestroyed();
+
+      // Track blocks destroyed during active events
+      const activeEvent = this.eventManager?.getActiveEvent();
+      if (activeEvent) {
+        stats.recordBlockDestroyedDuringEvent(activeEvent.id);
+      }
+
+      // Increment combo and apply multiplier (capped at MAX_COMBO_MULTIPLIER)
       this.incrementCombo();
-      const comboMultiplier = 1 + (this.comboCount - 1) * 0.25; // 1x, 1.25x, 1.5x, 1.75x, 2x...
+      const rawComboMultiplier = 1 + (this.comboCount - 1) * 0.25;
+      const comboMultiplier = Math.min(rawComboMultiplier, MAX_COMBO_MULTIPLIER);
 
       // Apply double points event if active
       const eventMultiplier = this.isEventActive('double_points') ? 2 : 1;
@@ -1532,6 +1592,9 @@ export class GameScene extends Phaser.Scene {
       if (shooter) {
         shooter.addScore(finalScore);
         this.showScorePopup(block.x, block.y, finalScore);
+
+        // Track score milestone for achievements
+        stats.recordScore(shooter.score);
       }
     } else {
       // Cluster took damage but isn't destroyed yet
@@ -1559,6 +1622,9 @@ export class GameScene extends Phaser.Scene {
 
   private incrementCombo(): void {
     this.comboCount++;
+
+    // Track combo for achievements
+    getGameStats().recordCombo(this.comboCount);
 
     // Reset combo timer
     if (this.comboTimer) {
@@ -1683,6 +1749,9 @@ export class GameScene extends Phaser.Scene {
         this.handleBombPowerUp(player);
         break;
     }
+
+    // Track power-up collection for achievements
+    getGameStats().recordPowerUpCollected(powerUp.powerUpType);
 
     // Play power-up sound
     getSound().play('powerup');
@@ -2182,6 +2251,12 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
+    // Update game stats for time-based achievements (use player 1's health)
+    const player1 = this.players[0];
+    if (player1 && player1.isAlive) {
+      getGameStats().updateTimePlayed(this.game.loop.delta, player1.health);
+    }
+
     // Update UI
     this.updateUI();
   }
@@ -2205,7 +2280,10 @@ export class GameScene extends Phaser.Scene {
       }
 
       if (input1.shoot) {
-        player1.shoot();
+        const lasers = player1.shoot();
+        if (lasers.length > 0) {
+          getGameStats().recordShotFired();
+        }
       }
     }
 
@@ -2228,7 +2306,10 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (input2.shoot) {
-          player2.shoot();
+          const lasers = player2.shoot();
+          if (lasers.length > 0) {
+            getGameStats().recordShotFired();
+          }
         }
       }
     }

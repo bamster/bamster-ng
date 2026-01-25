@@ -157,7 +157,3 @@ Game constants can be adjusted in `packages/shared/src/constants.ts`:
 - `BLOCK_SPAWN_INTERVAL` - Time between block spawns
 - `POWERUP_SPAWN_CHANCE` - Probability of power-up instead of block
 - `POWERUP_DURATION` - How long timed power-ups last
-
-## License
-
-MIT

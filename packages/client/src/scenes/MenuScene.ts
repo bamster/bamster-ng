@@ -40,15 +40,20 @@ export class MenuScene extends Phaser.Scene {
       graphics.lineBetween(0, y, GAME_WIDTH, y);
     }
 
-    // Title with chrome/neon effect
-    const titleShadow = this.add.text(GAME_WIDTH / 2 + 4, 84, 'BAMster 2000', {
+    // Title with chrome/neon effect - split into "BAMster" and "2OOO" for rainbow effect
+    const titleX = GAME_WIDTH / 2 - 60;
+    const yearX = GAME_WIDTH / 2 + 155;
+
+    // Shadow for "BAMster"
+    const titleShadow = this.add.text(titleX + 4, 84, 'BAMster', {
       fontSize: '72px',
       fontFamily: 'monospace',
       color: '#330033',
     });
     titleShadow.setOrigin(0.5);
 
-    const title = this.add.text(GAME_WIDTH / 2, 80, 'BAMster 2000', {
+    // Main "BAMster" text
+    const title = this.add.text(titleX, 80, 'BAMster', {
       fontSize: '72px',
       fontFamily: 'monospace',
       color: '#ff00ff',
@@ -57,8 +62,8 @@ export class MenuScene extends Phaser.Scene {
     });
     title.setOrigin(0.5);
 
-    // Glowing title effect
-    const titleGlow = this.add.text(GAME_WIDTH / 2, 80, 'BAMster 2000', {
+    // Glowing effect for "BAMster"
+    const titleGlow = this.add.text(titleX, 80, 'BAMster', {
       fontSize: '72px',
       fontFamily: 'monospace',
       color: '#ff00ff',
@@ -66,6 +71,37 @@ export class MenuScene extends Phaser.Scene {
     titleGlow.setOrigin(0.5);
     titleGlow.setAlpha(0.3);
     titleGlow.setBlendMode(Phaser.BlendModes.ADD);
+
+    // Shadow for "2OOO" (using O instead of 0 for no strikethrough)
+    const yearShadow = this.add.text(yearX + 4, 84, '2OOO', {
+      fontSize: '72px',
+      fontFamily: 'monospace',
+      color: '#330033',
+    });
+    yearShadow.setOrigin(0.5);
+
+    // Main "2OOO" text with rainbow effect
+    const year = this.add.text(yearX, 80, '2OOO', {
+      fontSize: '72px',
+      fontFamily: 'monospace',
+      color: '#ffff00',
+      stroke: '#ffffff',
+      strokeThickness: 4,
+    });
+    year.setOrigin(0.5);
+
+    // Rainbow color cycling for "2OOO"
+    const rainbowColors = ['#ff0000', '#ff8800', '#ffff00', '#00ff00', '#00ffff', '#0088ff', '#8800ff', '#ff00ff'];
+    let colorIndex = 0;
+    this.time.addEvent({
+      delay: 150,
+      callback: () => {
+        year.setColor(rainbowColors[colorIndex]);
+        year.setStroke(rainbowColors[(colorIndex + 4) % rainbowColors.length], 4);
+        colorIndex = (colorIndex + 1) % rainbowColors.length;
+      },
+      loop: true,
+    });
 
     // Subtitle
     const subtitle = this.add.text(GAME_WIDTH / 2, 150, "★ It's BAMster time! ★", {
@@ -114,7 +150,17 @@ export class MenuScene extends Phaser.Scene {
 
     // Animate title with pulsing glow
     this.tweens.add({
-      targets: [title, titleGlow],
+      targets: [title, titleGlow, titleShadow],
+      y: 85,
+      duration: 1500,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // Animate year "2OOO" in sync
+    this.tweens.add({
+      targets: [year, yearShadow],
       y: 85,
       duration: 1500,
       ease: 'Sine.easeInOut',

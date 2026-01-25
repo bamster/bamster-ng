@@ -27,6 +27,18 @@ export const KEY_DISPLAY_NAMES: Record<string, string> = {
   'TAB': 'TAB',
   'BACKSPACE': 'BKSP',
   'ESC': 'ESC',
+  // Punctuation
+  'PERIOD': '.',
+  'COMMA': ',',
+  'SEMICOLON': ';',
+  'QUOTES': "'",
+  'OPEN_BRACKET': '[',
+  'CLOSED_BRACKET': ']',
+  'BACK_SLASH': '\\',
+  'FORWARD_SLASH': '/',
+  'BACKTICK': '`',
+  'MINUS': '-',
+  'PLUS': '=',
 };
 
 export const DEFAULT_BINDINGS: GameKeyBindings = {
@@ -96,6 +108,19 @@ export function keyEventToString(event: KeyboardEvent): string {
   if (event.key === 'Alt') return 'ALT';
   if (event.key === 'Tab') return 'TAB';
   if (event.key === 'Backspace') return 'BACKSPACE';
+
+  // Punctuation keys - map to Phaser KeyCode names
+  if (event.key === '.') return 'PERIOD';
+  if (event.key === ',') return 'COMMA';
+  if (event.key === ';') return 'SEMICOLON';
+  if (event.key === "'") return 'QUOTES';
+  if (event.key === '[') return 'OPEN_BRACKET';
+  if (event.key === ']') return 'CLOSED_BRACKET';
+  if (event.key === '\\') return 'BACK_SLASH';
+  if (event.key === '/') return 'FORWARD_SLASH';
+  if (event.key === '`') return 'BACKTICK';
+  if (event.key === '-') return 'MINUS';
+  if (event.key === '=') return 'PLUS';
 
   // Regular alphanumeric keys - uppercase
   return event.key.toUpperCase();

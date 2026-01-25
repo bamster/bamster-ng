@@ -87,6 +87,23 @@ export class InputManager {
       if (charCode >= 65 && charCode <= 90) {
         return charCode;
       }
+      // Handle raw punctuation (backwards compatibility for old bindings)
+      const punctuationMap: Record<string, number> = {
+        '.': KeyCodes.PERIOD,
+        ',': KeyCodes.COMMA,
+        ';': KeyCodes.SEMICOLON,
+        "'": KeyCodes.QUOTES,
+        '[': KeyCodes.OPEN_BRACKET,
+        ']': KeyCodes.CLOSED_BRACKET,
+        '\\': KeyCodes.BACK_SLASH,
+        '/': KeyCodes.FORWARD_SLASH,
+        '`': KeyCodes.BACKTICK,
+        '-': KeyCodes.MINUS,
+        '=': KeyCodes.PLUS,
+      };
+      if (key in punctuationMap) {
+        return punctuationMap[key];
+      }
     }
     return 0;
   }

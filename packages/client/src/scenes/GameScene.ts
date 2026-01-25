@@ -10,6 +10,7 @@ import {
   GRAVITY,
   BAMSTER_STARTING_HEALTH,
 } from '@bamster/shared';
+import type { BlockColor } from '@bamster/shared';
 import type { GameMode } from './MenuScene';
 import { Bamster } from '../entities/Bamster';
 import { Block } from '../entities/Block';
@@ -2304,6 +2305,24 @@ export class GameScene extends Phaser.Scene {
       },
       onUpdate: (_scene, delta) => {
         this.updateShrinkRay(delta);
+      },
+    });
+
+    // Rainbow Rush event - all blocks same color
+    this.eventManager.registerEvent({
+      id: 'rainbow_rush',
+      name: 'RAINBOW RUSH',
+      icon: '🌈',
+      duration: 30000, // 30 seconds
+      onStart: (_scene) => {
+        // Pick a random color and lock it
+        const colors: BlockColor[] = ['magenta', 'cyan', 'lime', 'orange', 'violet'];
+        const randomColor = colors[Phaser.Math.Between(0, colors.length - 1)];
+        this.blockSpawner.setFixedBlockColor(randomColor);
+      },
+      onEnd: (_scene) => {
+        // Return to random colors
+        this.blockSpawner.setFixedBlockColor(null);
       },
     });
   }

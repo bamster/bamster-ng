@@ -51,6 +51,7 @@ export class BlockSpawner {
   // Event system controls
   private powerUpOnlyMode: boolean = false;
   private fallSpeedMultiplier: number = 1.0;
+  private fixedBlockColor: BlockColor | null = null; // For Rainbow Rush event
 
   constructor(
     scene: Phaser.Scene,
@@ -81,6 +82,22 @@ export class BlockSpawner {
   // Set power-up only mode (for Power-Up Shower event)
   setPowerUpOnlyMode(enabled: boolean): void {
     this.powerUpOnlyMode = enabled;
+  }
+
+  // Set fixed block color (for Rainbow Rush event)
+  // Pass null to return to random colors
+  setFixedBlockColor(color: BlockColor | null): void {
+    this.fixedBlockColor = color;
+  }
+
+  // Get a random color or the fixed color if set
+  private getBlockColor(): BlockColor {
+    if (this.fixedBlockColor) {
+      return this.fixedBlockColor;
+    }
+    return BLOCK_COLORS[
+      Phaser.Math.Between(0, BLOCK_COLORS.length - 1)
+    ] as BlockColor;
   }
 
   // Set fall speed multiplier (for Block Rain event)
@@ -153,9 +170,7 @@ export class BlockSpawner {
         const x = FRAME_WIDTH + col * BLOCK_SIZE + BLOCK_SIZE / 2;
         const y = GAME_HEIGHT - BLOCK_SIZE / 2 - row * BLOCK_SIZE;
 
-        const color = BLOCK_COLORS[
-          Phaser.Math.Between(0, BLOCK_COLORS.length - 1)
-        ] as BlockColor;
+        const color = this.getBlockColor();
 
         const block = new Block(this.scene, x, y, color);
         block.setVelocity(0, 0); // Stop falling
@@ -250,9 +265,7 @@ export class BlockSpawner {
   }
 
   private spawnBlock(x: number, y: number): Block {
-    const color = BLOCK_COLORS[
-      Phaser.Math.Between(0, BLOCK_COLORS.length - 1)
-    ] as BlockColor;
+    const color = this.getBlockColor();
     const block = new Block(this.scene, x, y, color);
     block.setFallSpeed(this.getEffectiveFallSpeed());
     this.blockGroup.add(block);

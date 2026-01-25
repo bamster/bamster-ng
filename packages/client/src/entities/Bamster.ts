@@ -185,17 +185,16 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
 
     this.weaponType = type;
 
-    // Add visual indicator based on weapon type
-    const tints: Record<string, number> = {
+    // Brief flash effect based on weapon type (preserves color vibrancy)
+    const flashColors: Record<string, number> = {
       rapid: 0xff8888,
       spread: 0x88ff88,
       piercing: 0xaa88ff,
     };
-    this.setTint(tints[type]);
+    this.flashEffect(flashColors[type]);
 
     this.weaponTimer = this.scene.time.delayedCall(POWERUP_DURATION, () => {
       this.weaponType = 'basic';
-      this.clearTint();
       this.weaponTimer = undefined;
     });
   }
@@ -333,6 +332,14 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
         this.die();
       }
     }
+  }
+
+  /** Brief flash effect for power-up collection (preserves color vibrancy) */
+  private flashEffect(color: number): void {
+    this.setTint(color);
+    this.scene.time.delayedCall(100, () => {
+      this.clearTint();
+    });
   }
 
   private updateSprite(velocityY: number, onGround: boolean): void {

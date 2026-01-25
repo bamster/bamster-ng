@@ -161,37 +161,46 @@ export class SettingsScene extends Phaser.Scene {
 
     this.createDifficultySelector(GAME_WIDTH / 2, 340);
 
+    // Sprite style section
+    this.add.text(GAME_WIDTH / 2, 385, '─── SPRITE STYLE ───', {
+      fontSize: '16px',
+      fontFamily: 'monospace',
+      color: '#00ffff',
+    }).setOrigin(0.5);
+
+    this.createSpriteStyleSelector(GAME_WIDTH / 2, 420);
+
     // Controls section
-    this.add.text(GAME_WIDTH / 2, 390, '─── CONTROLS (click to rebind) ───', {
+    this.add.text(GAME_WIDTH / 2, 465, '─── CONTROLS (click to rebind) ───', {
       fontSize: '14px',
       fontFamily: 'monospace',
       color: '#00ffff',
     }).setOrigin(0.5);
 
     // Player 1 controls
-    this.add.text(GAME_WIDTH / 2 - 180, 415, 'P1:', {
+    this.add.text(GAME_WIDTH / 2 - 180, 490, 'P1:', {
       fontSize: '12px',
       fontFamily: 'monospace',
       color: '#ff00ff',
     });
-    this.createKeyBinding(GAME_WIDTH / 2 - 120, 415, 'LEFT', 'player1', 'left');
-    this.createKeyBinding(GAME_WIDTH / 2 - 50, 415, 'RIGHT', 'player1', 'right');
-    this.createKeyBinding(GAME_WIDTH / 2 + 20, 415, 'JUMP', 'player1', 'jump');
-    this.createKeyBinding(GAME_WIDTH / 2 + 100, 415, 'SHOOT', 'player1', 'shoot');
+    this.createKeyBinding(GAME_WIDTH / 2 - 120, 490, 'LEFT', 'player1', 'left');
+    this.createKeyBinding(GAME_WIDTH / 2 - 50, 490, 'RIGHT', 'player1', 'right');
+    this.createKeyBinding(GAME_WIDTH / 2 + 20, 490, 'JUMP', 'player1', 'jump');
+    this.createKeyBinding(GAME_WIDTH / 2 + 100, 490, 'SHOOT', 'player1', 'shoot');
 
     // Player 2 controls
-    this.add.text(GAME_WIDTH / 2 - 180, 455, 'P2:', {
+    this.add.text(GAME_WIDTH / 2 - 180, 525, 'P2:', {
       fontSize: '12px',
       fontFamily: 'monospace',
       color: '#00ffff',
     });
-    this.createKeyBinding(GAME_WIDTH / 2 - 120, 455, 'LEFT', 'player2', 'left');
-    this.createKeyBinding(GAME_WIDTH / 2 - 50, 455, 'RIGHT', 'player2', 'right');
-    this.createKeyBinding(GAME_WIDTH / 2 + 20, 455, 'JUMP', 'player2', 'jump');
-    this.createKeyBinding(GAME_WIDTH / 2 + 100, 455, 'SHOOT', 'player2', 'shoot');
+    this.createKeyBinding(GAME_WIDTH / 2 - 120, 525, 'LEFT', 'player2', 'left');
+    this.createKeyBinding(GAME_WIDTH / 2 - 50, 525, 'RIGHT', 'player2', 'right');
+    this.createKeyBinding(GAME_WIDTH / 2 + 20, 525, 'JUMP', 'player2', 'jump');
+    this.createKeyBinding(GAME_WIDTH / 2 + 100, 525, 'SHOOT', 'player2', 'shoot');
 
     // Reset to defaults button
-    this.createSmallButton(GAME_WIDTH / 2, 495, 'RESET TO DEFAULTS', () => {
+    this.createSmallButton(GAME_WIDTH / 2, 555, 'RESET TO DEFAULTS', () => {
       this.keyBindings = resetKeyBindings();
       this.updateAllKeyBindingTexts();
     });
@@ -403,6 +412,82 @@ export class SettingsScene extends Phaser.Scene {
       const label = container.getData('label') as Phaser.GameObjects.Text;
 
       if (this.settings.difficulty === difficulty) {
+        bg.setFillStyle(0x4a1a6a);
+        bg.setStrokeStyle(3, COLORS.neonCyan);
+        label.setColor('#00ffff');
+      } else {
+        bg.setFillStyle(COLORS.darkPurple);
+        bg.setStrokeStyle(2, COLORS.neonPink);
+        label.setColor('#ffffff');
+      }
+    });
+  }
+
+  private spriteStyleButtons: Phaser.GameObjects.Container[] = [];
+
+  private createSpriteStyleSelector(x: number, y: number): void {
+    this.spriteStyleButtons = [];
+
+    const styles: { style: SpriteStyle; label: string }[] = [
+      { style: 'modern', label: 'MODERN' },
+      { style: 'legacy', label: 'LEGACY' },
+    ];
+    const buttonWidth = 120;
+    const spacing = 20;
+    const totalWidth = styles.length * buttonWidth + (styles.length - 1) * spacing;
+    let startX = x - totalWidth / 2 + buttonWidth / 2;
+
+    styles.forEach(({ style, label }) => {
+      const container = this.add.container(startX, y);
+
+      const bg = this.add.rectangle(0, 0, buttonWidth, 35, COLORS.darkPurple);
+      bg.setStrokeStyle(2, COLORS.neonPink);
+
+      const labelText = this.add.text(0, 0, label, {
+        fontSize: '14px',
+        fontFamily: 'monospace',
+        color: '#ffffff',
+      });
+      labelText.setOrigin(0.5);
+
+      container.add([bg, labelText]);
+      container.setSize(buttonWidth, 35);
+      container.setInteractive({ useHandCursor: true });
+      container.setData('style', style);
+      container.setData('bg', bg);
+      container.setData('label', labelText);
+
+      container.on('pointerover', () => {
+        if (this.settings.spriteStyle !== style) {
+          bg.setFillStyle(0x4a1a6a);
+        }
+      });
+
+      container.on('pointerout', () => {
+        if (this.settings.spriteStyle !== style) {
+          bg.setFillStyle(COLORS.darkPurple);
+        }
+      });
+
+      container.on('pointerdown', () => {
+        this.settings.spriteStyle = style;
+        this.updateSpriteStyleButtons();
+      });
+
+      this.spriteStyleButtons.push(container);
+      startX += buttonWidth + spacing;
+    });
+
+    this.updateSpriteStyleButtons();
+  }
+
+  private updateSpriteStyleButtons(): void {
+    this.spriteStyleButtons.forEach((container) => {
+      const style = container.getData('style') as SpriteStyle;
+      const bg = container.getData('bg') as Phaser.GameObjects.Rectangle;
+      const label = container.getData('label') as Phaser.GameObjects.Text;
+
+      if (this.settings.spriteStyle === style) {
         bg.setFillStyle(0x4a1a6a);
         bg.setStrokeStyle(3, COLORS.neonCyan);
         label.setColor('#00ffff');
@@ -640,4 +725,9 @@ export function toggleDebugMode(): boolean {
     // Ignore localStorage errors
   }
   return settings.debugMode;
+}
+
+// Get current sprite style setting
+export function getSpriteStyle(): SpriteStyle {
+  return getGameSettings().spriteStyle;
 }

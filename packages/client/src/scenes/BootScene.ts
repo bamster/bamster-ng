@@ -90,14 +90,97 @@ export class BootScene extends Phaser.Scene {
 
     // Generate achievement badge textures
     this.generateAchievementBadges();
+
+    // Load legacy sprites
+    this.loadLegacySprites();
   }
 
   create(): void {
     // Create animations
     this.createAnimations();
 
+    // Create legacy sprite animations
+    this.createLegacyAnimations();
+
     // Start menu scene
     this.scene.start('MenuScene');
+  }
+
+  private loadLegacySprites(): void {
+    // Load legacy BAMster sprites from the original game
+    const basePath = 'sprites/legacy/';
+
+    // Run animation frames (7 frames)
+    for (let i = 0; i <= 6; i++) {
+      this.load.image(`legacy_run_${i}`, `${basePath}bamster_run_r${i}.png`);
+    }
+
+    // Jump animation frames (8 frames)
+    for (let i = 0; i <= 7; i++) {
+      this.load.image(`legacy_jump_${i}`, `${basePath}bamster_jump_r${i}.png`);
+    }
+
+    // Wait/idle animation frames (4 frames)
+    for (let i = 0; i <= 3; i++) {
+      this.load.image(`legacy_wait_${i}`, `${basePath}bamster_wait_r${i}.png`);
+    }
+  }
+
+  private createLegacyAnimations(): void {
+    // Legacy run animation
+    this.anims.create({
+      key: 'legacy_run',
+      frames: [
+        { key: 'legacy_run_0' },
+        { key: 'legacy_run_1' },
+        { key: 'legacy_run_2' },
+        { key: 'legacy_run_3' },
+        { key: 'legacy_run_4' },
+        { key: 'legacy_run_5' },
+        { key: 'legacy_run_6' },
+      ],
+      frameRate: 12,
+      repeat: -1,
+    });
+
+    // Legacy idle/wait animation
+    this.anims.create({
+      key: 'legacy_idle',
+      frames: [
+        { key: 'legacy_wait_0' },
+        { key: 'legacy_wait_1' },
+        { key: 'legacy_wait_2' },
+        { key: 'legacy_wait_3' },
+      ],
+      frameRate: 6,
+      repeat: -1,
+    });
+
+    // Legacy jump animation
+    this.anims.create({
+      key: 'legacy_jump',
+      frames: [
+        { key: 'legacy_jump_0' },
+        { key: 'legacy_jump_1' },
+        { key: 'legacy_jump_2' },
+        { key: 'legacy_jump_3' },
+      ],
+      frameRate: 10,
+      repeat: 0,
+    });
+
+    // Legacy fall animation (second half of jump frames)
+    this.anims.create({
+      key: 'legacy_fall',
+      frames: [
+        { key: 'legacy_jump_4' },
+        { key: 'legacy_jump_5' },
+        { key: 'legacy_jump_6' },
+        { key: 'legacy_jump_7' },
+      ],
+      frameRate: 10,
+      repeat: 0,
+    });
   }
 
   private generateBlockTextures(): void {

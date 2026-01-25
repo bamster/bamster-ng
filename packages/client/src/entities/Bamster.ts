@@ -19,6 +19,7 @@ import {
 import type { WeaponType } from '@bamster/shared';
 import { Laser } from './Laser';
 import { getSound } from '../systems/SoundManager';
+import { getSpriteStyle } from '../scenes/SettingsScene';
 
 export class Bamster extends Phaser.Physics.Arcade.Sprite {
   public playerId: string;
@@ -60,6 +61,9 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   // Landing detection for dust effect
   private wasInAir: boolean = false;
 
+  // Sprite style (modern or legacy)
+  private useLegacySprites: boolean = false;
+
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -68,13 +72,19 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     laserGroup: Phaser.Physics.Arcade.Group,
     playerNumber: number = 1
   ) {
-    // Player 2 uses different textures (blue cape)
+    // Check sprite style setting
+    const spriteStyle = getSpriteStyle();
+    const useLegacy = spriteStyle === 'legacy';
+
+    // Player 2 uses different textures (blue cape) - only for modern sprites
     const texturePrefix = playerNumber === 2 ? 'bamster_p2' : 'bamster';
-    super(scene, x, y, texturePrefix);
+    const initialTexture = useLegacy ? 'legacy_wait_0' : texturePrefix;
+    super(scene, x, y, initialTexture);
 
     this.playerId = playerId;
     this.laserGroup = laserGroup;
     this.texturePrefix = texturePrefix;
+    this.useLegacySprites = useLegacy;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -762,6 +772,13 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   private updateSprite(velocityY: number, onGround: boolean): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const isMovingHorizontally = Math.abs(body.velocity.x) > 10;
+
+    // Handle legacy sprites differently - use flipX instead of separate textures
+    if (this.useLegacySprites) {
+      this.updateLegacySprite(velocityY, onGround, isMovingHorizontally);
+      return;
+    }
+
     const p = this.texturePrefix;
     const left = p === 'bamster_p2' ? '_left' : '_left';
 
@@ -800,6 +817,40 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
       const textureName = this.facingRight ? p : `${p}${left}`;
       if (this.texture.key !== textureName) {
         this.setTexture(textureName);
+      }
+    }
+  }
+
+  private updateLegacySprite(velocityY: number, onGround: boolean, isMovingHorizontally: boolean): void {
+    // Legacy sprites use flipX for direction
+    this.setFlipX(!this.facingRight);
+
+    if (onGround) {
+      if (isMovingHorizontally) {
+        // Running - play legacy run animation
+        if (this.anims.currentAnim?.key !== 'legacy_run') {
+          this.play('legacy_run');
+        }
+      } else {
+        // Standing still - play idle animation
+        if (this.anims.currentAnim?.key !== 'legacy_idle') {
+          this.play('legacy_idle');
+        }
+      }
+    } else if (velocityY < -50) {
+      // Going up (jumping)
+      if (this.anims.currentAnim?.key !== 'legacy_jump') {
+        this.play('legacy_jump');
+      }
+    } else if (velocityY > 50) {
+      // Falling
+      if (this.anims.currentAnim?.key !== 'legacy_fall') {
+        this.play('legacy_fall');
+      }
+    } else {
+      // Near apex - use idle
+      if (this.anims.currentAnim?.key !== 'legacy_idle') {
+        this.play('legacy_idle');
       }
     }
   }

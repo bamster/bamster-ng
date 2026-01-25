@@ -117,6 +117,12 @@ export class GameScene extends Phaser.Scene {
   private readonly INTERPOLATION_DELAY = 100; // ms - how far behind to render remote players
   private readonly MAX_BUFFER_SIZE = 10; // max states to keep in buffer
 
+  // Shrink Ray event state
+  private shrinkRayActive: boolean = false;
+  private shrinkRayOffset: number = 0; // How much the walls have moved inward
+  private shrinkRayMaxOffset: number = 100; // Maximum shrink amount (pixels from each side)
+  private shrinkRayWalls?: Phaser.GameObjects.Graphics;
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -2283,6 +2289,23 @@ export class GameScene extends Phaser.Scene {
         });
       },
     });
+
+    // Shrink Ray event - play area narrows
+    this.eventManager.registerEvent({
+      id: 'shrink_ray',
+      name: 'SHRINK RAY',
+      icon: '📐',
+      duration: 25000, // 25 seconds
+      onStart: (_scene) => {
+        this.startShrinkRay();
+      },
+      onEnd: (_scene) => {
+        this.endShrinkRay();
+      },
+      onUpdate: (_scene, delta) => {
+        this.updateShrinkRay(delta);
+      },
+    });
   }
 
   /**
@@ -2298,5 +2321,174 @@ export class GameScene extends Phaser.Scene {
    */
   getEventManager(): EventManager | undefined {
     return this.eventManager;
+  }
+
+  /**
+   * Start the Shrink Ray event - walls begin moving inward
+   */
+  private startShrinkRay(): void {
+    this.shrinkRayActive = true;
+    this.shrinkRayOffset = 0;
+
+    // Create visual walls if they don't exist
+    if (!this.shrinkRayWalls) {
+      this.shrinkRayWalls = this.add.graphics();
+      this.shrinkRayWalls.setDepth(99); // Just below frame
+    }
+  }
+
+  /**
+   * End the Shrink Ray event - restore normal play area
+   */
+  private endShrinkRay(): void {
+    this.shrinkRayActive = false;
+
+    // Animate walls back out
+    this.tweens.add({
+      targets: this,
+      shrinkRayOffset: 0,
+      duration: 500,
+      ease: 'Quad.easeOut',
+      onUpdate: () => {
+        this.drawShrinkRayWalls();
+      },
+      onComplete: () => {
+        // Clean up
+        if (this.shrinkRayWalls) {
+          this.shrinkRayWalls.destroy();
+          this.shrinkRayWalls = undefined;
+        }
+      },
+    });
+  }
+
+  /**
+   * Update Shrink Ray effect each frame
+   */
+  private updateShrinkRay(delta: number): void {
+    if (!this.shrinkRayActive) return;
+
+    // Gradually increase shrink over first 2 seconds
+    const shrinkSpeed = this.shrinkRayMaxOffset / 2000; // Full shrink in 2 seconds
+    if (this.shrinkRayOffset < this.shrinkRayMaxOffset) {
+      this.shrinkRayOffset = Math.min(
+        this.shrinkRayOffset + shrinkSpeed * delta,
+        this.shrinkRayMaxOffset
+      );
+    }
+
+    // Draw the visual walls
+    this.drawShrinkRayWalls();
+
+    // Get effective bounds
+    const leftBound = FRAME_WIDTH + this.shrinkRayOffset;
+    const rightBound = PLAY_AREA_WIDTH - FRAME_WIDTH - this.shrinkRayOffset;
+
+    // Crush blocks outside bounds
+    this.blockGroup.children.each((child) => {
+      const block = child as Block;
+      if (block.active) {
+        // Check if block center is outside the narrowed area
+        if (block.x < leftBound || block.x > rightBound) {
+          // Crush the block with visual effect
+          this.crushBlock(block);
+        }
+      }
+      return true;
+    });
+
+    // Constrain players to narrowed area
+    this.players.forEach((player) => {
+      const halfWidth = 16;
+      if (player.x < leftBound + halfWidth) {
+        player.x = leftBound + halfWidth;
+        player.setVelocityX(0);
+      } else if (player.x > rightBound - halfWidth) {
+        player.x = rightBound - halfWidth;
+        player.setVelocityX(0);
+      }
+    });
+  }
+
+  /**
+   * Draw the shrink ray visual walls
+   */
+  private drawShrinkRayWalls(): void {
+    if (!this.shrinkRayWalls) return;
+
+    this.shrinkRayWalls.clear();
+
+    // Semi-transparent danger zone walls
+    const alpha = 0.7;
+    const dangerColor = 0xff0066; // Neon pink
+
+    // Left wall
+    this.shrinkRayWalls.fillStyle(dangerColor, alpha);
+    this.shrinkRayWalls.fillRect(
+      FRAME_WIDTH,
+      FRAME_WIDTH,
+      this.shrinkRayOffset,
+      GAME_HEIGHT - FRAME_WIDTH * 2
+    );
+
+    // Right wall
+    this.shrinkRayWalls.fillRect(
+      PLAY_AREA_WIDTH - FRAME_WIDTH - this.shrinkRayOffset,
+      FRAME_WIDTH,
+      this.shrinkRayOffset,
+      GAME_HEIGHT - FRAME_WIDTH * 2
+    );
+
+    // Glowing edge lines
+    this.shrinkRayWalls.lineStyle(2, 0xff00ff, 1);
+    // Left edge
+    this.shrinkRayWalls.lineBetween(
+      FRAME_WIDTH + this.shrinkRayOffset,
+      FRAME_WIDTH,
+      FRAME_WIDTH + this.shrinkRayOffset,
+      GAME_HEIGHT - FRAME_WIDTH
+    );
+    // Right edge
+    this.shrinkRayWalls.lineBetween(
+      PLAY_AREA_WIDTH - FRAME_WIDTH - this.shrinkRayOffset,
+      FRAME_WIDTH,
+      PLAY_AREA_WIDTH - FRAME_WIDTH - this.shrinkRayOffset,
+      GAME_HEIGHT - FRAME_WIDTH
+    );
+  }
+
+  /**
+   * Crush a block (used by Shrink Ray event)
+   */
+  private crushBlock(block: Block): void {
+    // Play crush sound (use explosion since blockBreak doesn't exist)
+    getSound().play('explosion');
+
+    // Visual crush effect - squeeze and fade
+    this.tweens.add({
+      targets: block,
+      scaleX: 0,
+      scaleY: 1.5,
+      alpha: 0,
+      duration: 200,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        block.destroy();
+      },
+    });
+  }
+
+  /**
+   * Get the effective left boundary (accounts for shrink ray)
+   */
+  getEffectiveLeftBound(): number {
+    return FRAME_WIDTH + this.shrinkRayOffset;
+  }
+
+  /**
+   * Get the effective right boundary (accounts for shrink ray)
+   */
+  getEffectiveRightBound(): number {
+    return PLAY_AREA_WIDTH - FRAME_WIDTH - this.shrinkRayOffset;
   }
 }

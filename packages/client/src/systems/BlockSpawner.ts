@@ -43,6 +43,10 @@ export class BlockSpawner {
   // Early game power-up tracking
   private spawnCount: number = 0;
   private earlyPowerUpSpawned: boolean = false;
+  private powerUpSpawnedCount: number = 0;
+
+  // Callback to get current player score (for score-based power-up guarantee)
+  private getScoreCallback?: () => number;
 
   constructor(
     scene: Phaser.Scene,
@@ -63,6 +67,11 @@ export class BlockSpawner {
       this.currentFallSpeed = this.baseFallSpeed;
       this.currentSpawnInterval = this.baseSpawnInterval;
     }
+  }
+
+  // Set callback to get current player score
+  setScoreCallback(callback: () => number): void {
+    this.getScoreCallback = callback;
   }
 
   // Get cluster HP
@@ -162,13 +171,22 @@ export class BlockSpawner {
 
     // Determine if we should spawn a power-up
     let shouldSpawnPowerUp = false;
+    let spawnReason = '';
+
+    // Score-based guarantee: if player has 200+ points and no power-up has spawned yet
+    const currentScore = this.getScoreCallback ? this.getScoreCallback() : 0;
+    if (this.powerUpSpawnedCount === 0 && currentScore >= 200) {
+      shouldSpawnPowerUp = true;
+      spawnReason = `scoreGuarantee (score: ${currentScore})`;
+    }
 
     // Guarantee first power-up between spawns 5-8 (gives player time to adjust)
-    if (!this.earlyPowerUpSpawned && this.spawnCount >= 5 && this.spawnCount <= 8) {
+    if (!shouldSpawnPowerUp && !this.earlyPowerUpSpawned && this.spawnCount >= 5 && this.spawnCount <= 8) {
       // Increasing chance: 25% at spawn 5, 50% at 6, 75% at 7, guaranteed at 8
       const earlyChance = (this.spawnCount - 4) * 0.25;
       if (Math.random() < earlyChance) {
         shouldSpawnPowerUp = true;
+        spawnReason = `earlyChance: ${(earlyChance * 100).toFixed(0)}%`;
         this.earlyPowerUpSpawned = true;
       }
     }
@@ -178,8 +196,15 @@ export class BlockSpawner {
       // Double power-up chance for first 20 spawns
       const effectiveChance =
         this.spawnCount <= 20 ? POWERUP_SPAWN_CHANCE * 2 : POWERUP_SPAWN_CHANCE;
-      shouldSpawnPowerUp = Math.random() < effectiveChance;
+      const roll = Math.random();
+      if (roll < effectiveChance) {
+        shouldSpawnPowerUp = true;
+        spawnReason = `regularChance (${(effectiveChance * 100).toFixed(1)}%, rolled ${(roll * 100).toFixed(1)}%)`;
+      }
     }
+
+    // Debug logging
+    console.log(`[Spawn #${this.spawnCount}] shouldSpawnPowerUp: ${shouldSpawnPowerUp}${spawnReason ? ` (${spawnReason})` : ''}`);
 
     if (shouldSpawnPowerUp) {
       this.spawnPowerUp(x, y);
@@ -216,6 +241,11 @@ export class BlockSpawner {
     const type = types[Phaser.Math.Between(0, types.length - 1)];
     const powerUp = new PowerUp(this.scene, x, y, type);
     this.powerUpGroup.add(powerUp);
+    this.powerUpSpawnedCount++;
+
+    // Debug logging
+    console.log(`POWER-UP SPAWNED: ${type} at (${x.toFixed(0)}, ${y.toFixed(0)}) [total: ${this.powerUpSpawnedCount}]`);
+
     return powerUp;
   }
 

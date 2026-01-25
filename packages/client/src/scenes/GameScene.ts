@@ -220,6 +220,12 @@ export class GameScene extends Phaser.Scene {
     // Create players based on mode (they'll stand on the ground)
     this.createPlayers();
 
+    // Set score callback for BlockSpawner to check player score (for guaranteed power-up at 200 pts)
+    this.blockSpawner.setScoreCallback(() => {
+      // Return highest player score
+      return Math.max(...this.players.map((p) => p.score), 0);
+    });
+
     // Setup collisions
     this.setupCollisions();
 

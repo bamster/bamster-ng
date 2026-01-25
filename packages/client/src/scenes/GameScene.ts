@@ -124,6 +124,9 @@ export class GameScene extends Phaser.Scene {
   private shrinkRayMaxOffset: number = 100; // Maximum shrink amount (pixels from each side)
   private shrinkRayWalls?: Phaser.GameObjects.Graphics;
 
+  // Lights Out event state
+  private lightsOutOverlay?: Phaser.GameObjects.Graphics;
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -2353,6 +2356,20 @@ export class GameScene extends Phaser.Scene {
         });
       },
     });
+
+    // Lights Out event - screen goes dark
+    this.eventManager.registerEvent({
+      id: 'lights_out',
+      name: 'LIGHTS OUT',
+      icon: '🌑',
+      duration: 20000, // 20 seconds
+      onStart: (_scene) => {
+        this.startLightsOut();
+      },
+      onEnd: (_scene) => {
+        this.endLightsOut();
+      },
+    });
   }
 
   /**
@@ -2537,5 +2554,91 @@ export class GameScene extends Phaser.Scene {
    */
   getEffectiveRightBound(): number {
     return PLAY_AREA_WIDTH - FRAME_WIDTH - this.shrinkRayOffset;
+  }
+
+  /**
+   * Start the Lights Out event - darken screen, add glow effects
+   */
+  private startLightsOut(): void {
+    // Create dark overlay
+    this.lightsOutOverlay = this.add.graphics();
+    this.lightsOutOverlay.setDepth(90); // Below UI but above most game elements
+
+    // Semi-transparent dark overlay over play area
+    this.lightsOutOverlay.fillStyle(0x000000, 0.85);
+    this.lightsOutOverlay.fillRect(
+      FRAME_WIDTH,
+      FRAME_WIDTH,
+      PLAY_AREA_WIDTH - FRAME_WIDTH * 2,
+      GAME_HEIGHT - FRAME_WIDTH * 2
+    );
+
+    // Fade in the darkness
+    this.lightsOutOverlay.setAlpha(0);
+    this.tweens.add({
+      targets: this.lightsOutOverlay,
+      alpha: 1,
+      duration: 500,
+      ease: 'Quad.easeIn',
+    });
+
+    // Make blocks barely visible (dark tint)
+    this.blockGroup.children.each((child) => {
+      const block = child as Block;
+      block.setTint(0x333333);
+      return true;
+    });
+
+    // Make players glow brightly
+    this.players.forEach((player) => {
+      player.setTint(0x00ffff); // Cyan glow
+    });
+
+    // Make power-ups glow
+    this.powerUpGroup.children.each((child) => {
+      (child as PowerUp).setTint(0xff00ff); // Magenta glow
+      return true;
+    });
+  }
+
+  /**
+   * End the Lights Out event - restore normal visibility
+   */
+  private endLightsOut(): void {
+    // Fade out and destroy overlay
+    if (this.lightsOutOverlay) {
+      this.tweens.add({
+        targets: this.lightsOutOverlay,
+        alpha: 0,
+        duration: 500,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          if (this.lightsOutOverlay) {
+            this.lightsOutOverlay.destroy();
+            this.lightsOutOverlay = undefined;
+          }
+        },
+      });
+    }
+
+    // Restore block colors
+    this.blockGroup.children.each((child) => {
+      const block = child as Block;
+      block.clearTint();
+      return true;
+    });
+
+    // Restore player colors (unless another event is affecting them)
+    this.players.forEach((player) => {
+      if (!player.invincible) {
+        player.clearTint();
+      }
+    });
+
+    // Restore power-up colors
+    this.powerUpGroup.children.each((child) => {
+      (child as PowerUp).clearTint();
+      return true;
+    });
   }
 }

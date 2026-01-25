@@ -14,7 +14,12 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "clean": "pnpm -r exec rm -rf dist"
+    "clean": "pnpm -r exec rm -rf dist",
+    "cap:sync": "pnpm --filter @bamster/client build && npx cap sync",
+    "cap:android": "pnpm run cap:sync && npx cap open android",
+    "cap:ios": "pnpm run cap:sync && npx cap open ios",
+    "cap:build:android": "pnpm run cap:sync && cd android && ./gradlew assembleDebug",
+    "cap:build:ios": "pnpm run cap:sync && cd ios && xcodebuild -workspace App/App.xcworkspace -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator'"
   },
   "keywords": [
     "game",
@@ -28,6 +33,10 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/cli": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/ios": "^6.2.1",
     "vitest": "^4.0.18"
   }
 }

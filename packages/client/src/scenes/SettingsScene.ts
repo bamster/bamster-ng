@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
+import { loadKeyBindings, getKeyDisplayName, type GameKeyBindings } from '../systems/KeyBindings';
 
 // 80s color palette (matching other scenes)
 const COLORS = {
@@ -139,12 +140,15 @@ export class SettingsScene extends Phaser.Scene {
       color: '#00ffff',
     }).setOrigin(0.5);
 
-    // Controls display
+    // Load key bindings
+    const bindings: GameKeyBindings = loadKeyBindings();
+
+    // Controls display using actual bindings
     const controlsData = [
-      { action: 'MOVE LEFT', key: '← / A' },
-      { action: 'MOVE RIGHT', key: '→ / D' },
-      { action: 'JUMP', key: '↑ / W' },
-      { action: 'SHOOT', key: 'SPACE' },
+      { action: 'MOVE LEFT', key: `${getKeyDisplayName(bindings.player1.left)} / A` },
+      { action: 'MOVE RIGHT', key: `${getKeyDisplayName(bindings.player1.right)} / D` },
+      { action: 'JUMP', key: `${getKeyDisplayName(bindings.player1.jump)} / W` },
+      { action: 'SHOOT', key: getKeyDisplayName(bindings.player1.shoot) },
       { action: 'PAUSE', key: 'ESC / P' },
     ];
 
@@ -163,8 +167,9 @@ export class SettingsScene extends Phaser.Scene {
       controlY += 28;
     });
 
-    // Player 2 controls note
-    this.add.text(GAME_WIDTH / 2, controlY + 20, 'PLAYER 2: WASD + E (shoot)', {
+    // Player 2 controls
+    const p2Keys = `${getKeyDisplayName(bindings.player2.left)}${getKeyDisplayName(bindings.player2.jump)}${getKeyDisplayName(bindings.player2.right)} + ${getKeyDisplayName(bindings.player2.shoot)} (shoot)`;
+    this.add.text(GAME_WIDTH / 2, controlY + 20, `PLAYER 2: ${p2Keys}`, {
       fontSize: '12px',
       fontFamily: 'monospace',
       color: '#666666',

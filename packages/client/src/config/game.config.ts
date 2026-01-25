@@ -6,7 +6,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
   parent: 'game-container',
-  backgroundColor: '#2d2d44',
+  backgroundColor: '#1a1a2e',
   physics: {
     default: 'arcade',
     arcade: {
@@ -17,6 +17,34 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
+    // Min/max ensures game doesn't get too small or pixelated
+    min: {
+      width: GAME_WIDTH / 2,
+      height: GAME_HEIGHT / 2,
+    },
+    max: {
+      width: GAME_WIDTH * 2,
+      height: GAME_HEIGHT * 2,
+    },
   },
   pixelArt: true,
+  // Enable touch input for mobile
+  input: {
+    activePointers: 3, // Support multi-touch
+    touch: {
+      target: undefined, // Use parent element
+      capture: true,
+    },
+  },
+  // Audio settings
+  audio: {
+    disableWebAudio: false,
+    noAudio: false,
+  },
+  // Performance optimizations
+  render: {
+    antialias: false, // Better for pixel art
+    pixelArt: true,
+    roundPixels: true, // Prevent sub-pixel rendering artifacts
+  },
 };

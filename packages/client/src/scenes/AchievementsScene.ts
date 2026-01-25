@@ -175,6 +175,7 @@ export class AchievementsScene extends Phaser.Scene {
 
     if (hasBadge) {
       const icon = this.add.image(-itemWidth / 2 + 30, 0, isUnlocked ? badgeKey : 'badge_default');
+      icon.setOrigin(0.5);
       icon.setScale(1.4);
       if (!isUnlocked) {
         icon.setAlpha(0.3);

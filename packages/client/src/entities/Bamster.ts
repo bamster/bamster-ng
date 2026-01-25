@@ -3,6 +3,7 @@ import {
   BAMSTER_SPEED,
   BAMSTER_JUMP_VELOCITY,
   BAMSTER_STARTING_HEALTH,
+  MAX_HEALTH,
   SLOW_FIRE_COOLDOWN,
   RAPID_FIRE_COOLDOWN,
   FIRE_RATE_UPGRADE_AMOUNT,
@@ -201,6 +202,9 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   }
 
   collectCorn(): void {
+    // Cap health at MAX_HEALTH
+    if (this.health >= MAX_HEALTH) return;
+
     this.health += 1;
     // Visual feedback - grow slightly (capped at 1.15x to avoid becoming too large)
     const scaleBonus = Math.min((this.health - 1) * 0.03, 0.15);

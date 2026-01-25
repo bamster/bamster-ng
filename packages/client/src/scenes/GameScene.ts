@@ -16,6 +16,7 @@ import { Block } from '../entities/Block';
 import { Laser } from '../entities/Laser';
 import { PowerUp } from '../entities/PowerUp';
 import { BlockSpawner } from '../systems/BlockSpawner';
+import { EventManager } from '../systems/EventManager';
 import { InputManager } from '../systems/InputManager';
 import {
   NetworkManager,
@@ -49,6 +50,7 @@ export class GameScene extends Phaser.Scene {
   private mode: GameMode = 'single';
   private inputManager!: InputManager;
   private blockSpawner!: BlockSpawner;
+  private eventManager!: EventManager;
 
   // Game objects
   private players: Bamster[] = [];
@@ -232,6 +234,14 @@ export class GameScene extends Phaser.Scene {
     // Create UI (now in side panel)
     this.createUI();
 
+    // Create event manager for random gameplay events
+    this.eventManager = new EventManager(this);
+    this.registerGameEvents();
+    // Position event UI in the sidebar
+    const panelCenterX = PLAY_AREA_WIDTH + (GAME_WIDTH - PLAY_AREA_WIDTH) / 2;
+    this.eventManager.createUI(panelCenterX, GAME_HEIGHT - 200);
+    this.eventManager.start();
+
     // Start spawning blocks
     this.blockSpawner.start();
 
@@ -254,6 +264,7 @@ export class GameScene extends Phaser.Scene {
     this.isPaused = true;
     this.physics.pause();
     this.blockSpawner.stop();
+    this.eventManager?.pause();
 
     // Create pause overlay
     this.pauseOverlay = this.add.container(0, 0);
@@ -366,6 +377,7 @@ export class GameScene extends Phaser.Scene {
     this.isPaused = false;
     this.physics.resume();
     this.blockSpawner.start();
+    this.eventManager?.resume();
 
     // Remove pause overlay
     if (this.pauseOverlay) {
@@ -1434,7 +1446,10 @@ export class GameScene extends Phaser.Scene {
       // Increment combo and apply multiplier
       this.incrementCombo();
       const comboMultiplier = 1 + (this.comboCount - 1) * 0.25; // 1x, 1.25x, 1.5x, 1.75x, 2x...
-      const finalScore = Math.floor(score * comboMultiplier);
+
+      // Apply double points event if active
+      const eventMultiplier = this.isEventActive('double_points') ? 2 : 1;
+      const finalScore = Math.floor(score * comboMultiplier * eventMultiplier);
 
       // Award points with combo bonus
       if (shooter) {
@@ -1953,6 +1968,7 @@ export class GameScene extends Phaser.Scene {
     this.isGameOver = true;
 
     this.blockSpawner.stop();
+    this.eventManager?.stop();
 
     // Determine final scores
     const scores = this.players.map((p) => ({
@@ -2051,6 +2067,9 @@ export class GameScene extends Phaser.Scene {
     // Handle input for each player
     this.handlePlayerInput();
 
+    // Update event manager (random events)
+    this.eventManager?.update(this.game.loop.delta);
+
     // Update players
     this.players.forEach((player) => player.update());
 
@@ -2135,5 +2154,77 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
+  }
+
+  /**
+   * Register available game events
+   * Each event has: id, name, icon, duration, onStart, onEnd, (optional) onUpdate
+   */
+  private registerGameEvents(): void {
+    // Double Points event - 2x score multiplier
+    this.eventManager.registerEvent({
+      id: 'double_points',
+      name: 'DOUBLE POINTS',
+      icon: '2X',
+      duration: 10000, // 10 seconds
+      onStart: (_scene) => {
+        // Double points is handled by checking if this event is active during scoring
+        // The actual multiplier application happens in handleLaserBlockCollision
+      },
+      onEnd: (_scene) => {
+        // Points return to normal automatically
+      },
+    });
+
+    // Freeze Frame event - blocks pause mid-air
+    this.eventManager.registerEvent({
+      id: 'freeze_frame',
+      name: 'FREEZE FRAME',
+      icon: '❄️',
+      duration: 8000, // 8 seconds
+      onStart: (scene) => {
+        // Pause all falling blocks
+        const gameScene = scene as GameScene;
+        gameScene.blockGroup.children.each((block) => {
+          const b = block as Block;
+          if (!b.isResting) {
+            const body = b.body as Phaser.Physics.Arcade.Body;
+            (b as Block & { savedVelocityY?: number }).savedVelocityY = body.velocity.y;
+            body.setVelocityY(0);
+          }
+          return true;
+        });
+      },
+      onEnd: (scene) => {
+        // Resume falling blocks
+        const gameScene = scene as GameScene;
+        gameScene.blockGroup.children.each((block) => {
+          const b = block as Block;
+          if (!b.isResting) {
+            const savedVel = (b as Block & { savedVelocityY?: number }).savedVelocityY;
+            if (savedVel !== undefined) {
+              const body = b.body as Phaser.Physics.Arcade.Body;
+              body.setVelocityY(savedVel);
+            }
+          }
+          return true;
+        });
+      },
+    });
+  }
+
+  /**
+   * Check if a specific event is currently active
+   */
+  isEventActive(eventId: string): boolean {
+    const activeEvent = this.eventManager?.getActiveEvent();
+    return activeEvent?.id === eventId;
+  }
+
+  /**
+   * Get the event manager (for external access if needed)
+   */
+  getEventManager(): EventManager | undefined {
+    return this.eventManager;
   }
 }

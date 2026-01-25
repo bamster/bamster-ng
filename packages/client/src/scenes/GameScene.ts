@@ -311,6 +311,20 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
+    // Debug: Toggle invincibility (F8)
+    this.input.keyboard?.on('keydown-F8', () => {
+      if (isDebugMode()) {
+        this.players.forEach((player) => {
+          player.invincible = !player.invincible;
+          if (player.invincible) {
+            player.setTint(0x00ff00); // Green tint when invincible
+          } else {
+            player.clearTint();
+          }
+        });
+      }
+    });
+
     // Create debug indicator (hidden by default, shown if debug mode active)
     this.createDebugIndicator();
 

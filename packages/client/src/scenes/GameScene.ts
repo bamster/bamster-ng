@@ -249,6 +249,9 @@ export class GameScene extends Phaser.Scene {
     const settings = getGameSettings();
     const difficultyConfig = DIFFICULTY_CONFIGS[settings.difficulty];
 
+    // Set combo timeout from difficulty config
+    this.comboTimeout = difficultyConfig.comboTimeout;
+
     // Create block spawner (local modes only) with difficulty config
     this.blockSpawner = new BlockSpawner(
       this,

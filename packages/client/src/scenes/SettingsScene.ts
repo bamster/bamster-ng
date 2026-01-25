@@ -21,6 +21,7 @@ const COLORS = {
 };
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
+export type SpriteStyle = 'modern' | 'legacy';
 
 export interface DifficultyConfig {
   blockFallSpeed: number;
@@ -64,6 +65,7 @@ interface GameSettings {
   sfxVolume: number;
   difficulty: Difficulty;
   debugMode: boolean;
+  spriteStyle: SpriteStyle;
 }
 
 const DEFAULT_SETTINGS: GameSettings = {
@@ -72,6 +74,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   sfxVolume: 0.8,
   difficulty: 'normal',
   debugMode: false,
+  spriteStyle: 'modern',
 };
 
 export class SettingsScene extends Phaser.Scene {
@@ -198,6 +201,14 @@ export class SettingsScene extends Phaser.Scene {
       if (this.waitingForKey) {
         event.preventDefault();
         const keyStr = keyEventToString(event);
+
+        // ESC cancels rebinding
+        if (keyStr === 'ESC') {
+          this.hideKeyBindingOverlay();
+          this.waitingForKey = null;
+          return;
+        }
+
         this.keyBindings[this.waitingForKey.player][this.waitingForKey.action] = keyStr;
         saveKeyBindings(this.keyBindings);
         this.updateAllKeyBindingTexts();

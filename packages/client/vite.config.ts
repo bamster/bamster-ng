@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig(({ mode }) => ({
+  // Set base path for GitHub Pages deployment
+  base: process.env.GITHUB_PAGES ? '/bamster-ng/' : '/',
   server: {
     port: 3000,
   },

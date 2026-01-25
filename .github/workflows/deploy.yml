@@ -40,6 +40,8 @@ jobs:
 
       - name: Build client
         run: pnpm --filter @bamster/client build
+        env:
+          GITHUB_PAGES: true
 
       - name: Add .nojekyll file
         run: touch packages/client/dist/.nojekyll

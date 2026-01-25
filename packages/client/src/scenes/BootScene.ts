@@ -25,7 +25,7 @@ export class BootScene extends Phaser.Scene {
     }
 
     // Title
-    const title = this.add.text(width / 2, height / 2 - 80, 'BAMSTER', {
+    const title = this.add.text(width / 2, height / 2 - 80, 'BAMster', {
       fontSize: '48px',
       fontFamily: 'monospace',
       color: '#ff00ff',
@@ -84,6 +84,9 @@ export class BootScene extends Phaser.Scene {
 
     // Generate heart textures for health display
     this.generateHeartTexture();
+
+    // Generate power-up overlay textures (sneakers, gun upgrades)
+    this.generatePowerUpOverlays();
   }
 
   create(): void {
@@ -560,6 +563,139 @@ export class BootScene extends Phaser.Scene {
 
     emptyGraphics.generateTexture('heart_empty', size, size);
     emptyGraphics.destroy();
+  }
+
+  private generatePowerUpOverlays(): void {
+    // Sneakers overlay - neon cyan shoes that appear on Bamster's feet
+    this.generateSneakersOverlay('sneakers_overlay', false);
+    this.generateSneakersOverlay('sneakers_overlay_left', true);
+
+    // Gun overlays for each weapon type
+    this.generateGunOverlay('gun_rapid', false, 'rapid');
+    this.generateGunOverlay('gun_rapid_left', true, 'rapid');
+    this.generateGunOverlay('gun_spread', false, 'spread');
+    this.generateGunOverlay('gun_spread_left', true, 'spread');
+    this.generateGunOverlay('gun_piercing', false, 'piercing');
+    this.generateGunOverlay('gun_piercing_left', true, 'piercing');
+  }
+
+  private generateSneakersOverlay(textureName: string, flipX: boolean): void {
+    const graphics = this.make.graphics({ x: 0, y: 0 });
+    const width = 56;
+    const height = 20;
+    const baseX = flipX ? 32 : 24;
+
+    // Neon cyan sneakers with glow effect
+    // Left shoe
+    const leftShoeX = baseX - 8;
+    const rightShoeX = baseX + 8;
+    const shoeY = 8;
+
+    // Glow around shoes
+    graphics.fillStyle(0x00ffff, 0.3);
+    graphics.fillEllipse(leftShoeX, shoeY, 14, 10);
+    graphics.fillEllipse(rightShoeX, shoeY, 14, 10);
+
+    // Shoe bodies
+    graphics.fillStyle(0x00ccff, 1);
+    graphics.fillEllipse(leftShoeX, shoeY, 10, 6);
+    graphics.fillEllipse(rightShoeX, shoeY, 10, 6);
+
+    // Neon pink soles
+    graphics.fillStyle(0xff00ff, 1);
+    graphics.fillRect(leftShoeX - 5, shoeY + 2, 10, 3);
+    graphics.fillRect(rightShoeX - 5, shoeY + 2, 10, 3);
+
+    // White stripes
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillRect(leftShoeX - 4, shoeY - 2, 8, 2);
+    graphics.fillRect(rightShoeX - 4, shoeY - 2, 8, 2);
+
+    // Wing icons (speed)
+    graphics.fillStyle(0xffff00, 1);
+    const wingDir = flipX ? -1 : 1;
+    graphics.fillTriangle(
+      leftShoeX + wingDir * 4, shoeY - 4,
+      leftShoeX + wingDir * 8, shoeY,
+      leftShoeX + wingDir * 4, shoeY
+    );
+    graphics.fillTriangle(
+      rightShoeX + wingDir * 4, shoeY - 4,
+      rightShoeX + wingDir * 8, shoeY,
+      rightShoeX + wingDir * 4, shoeY
+    );
+
+    graphics.generateTexture(textureName, width, height);
+    graphics.destroy();
+  }
+
+  private generateGunOverlay(textureName: string, flipX: boolean, type: 'rapid' | 'spread' | 'piercing'): void {
+    const graphics = this.make.graphics({ x: 0, y: 0 });
+    const width = 40;
+    const height = 20;
+
+    // Colors based on weapon type
+    const colors: Record<string, { main: number; glow: number }> = {
+      rapid: { main: 0xff4400, glow: 0xff8800 },
+      spread: { main: 0x00ff44, glow: 0x88ff88 },
+      piercing: { main: 0x8844ff, glow: 0x00ffff },
+    };
+    const color = colors[type];
+
+    const gunX = flipX ? 26 : 4;
+    const gunY = 6;
+
+    // Outer glow
+    graphics.fillStyle(color.glow, 0.4);
+    if (type === 'piercing') {
+      // Longer barrel for piercing
+      graphics.fillRoundedRect(gunX - (flipX ? 14 : 0), gunY - 4, 22, 14, 4);
+    } else if (type === 'spread') {
+      // Wider barrel for spread
+      graphics.fillRoundedRect(gunX - (flipX ? 8 : 0), gunY - 5, 16, 16, 4);
+    } else {
+      // Standard size for rapid
+      graphics.fillRoundedRect(gunX - (flipX ? 8 : 0), gunY - 3, 16, 12, 4);
+    }
+
+    // Gun body
+    graphics.fillStyle(0x333333, 1);
+    if (type === 'piercing') {
+      // Longer gun
+      graphics.fillRect(gunX - (flipX ? 10 : 0), gunY, 18, 6);
+    } else if (type === 'spread') {
+      // Wider muzzle
+      graphics.fillRect(gunX - (flipX ? 6 : 0), gunY - 1, 14, 8);
+    } else {
+      // Standard gun
+      graphics.fillRect(gunX - (flipX ? 6 : 0), gunY, 14, 6);
+    }
+
+    // Neon glow on muzzle
+    graphics.fillStyle(color.main, 1);
+    if (type === 'piercing') {
+      const muzzleX = flipX ? gunX - 12 : gunX + 14;
+      graphics.fillRect(muzzleX, gunY + 1, 6, 4);
+      // Energy rings
+      graphics.lineStyle(2, color.glow, 0.8);
+      graphics.strokeCircle(flipX ? gunX - 6 : gunX + 10, gunY + 3, 4);
+    } else if (type === 'spread') {
+      // Triple muzzle glow
+      const muzzleX = flipX ? gunX - 6 : gunX + 10;
+      graphics.fillCircle(muzzleX, gunY, 3);
+      graphics.fillCircle(muzzleX, gunY + 3, 3);
+      graphics.fillCircle(muzzleX, gunY + 6, 3);
+    } else {
+      // Rapid fire glow - pulsing effect (just brighter)
+      const muzzleX = flipX ? gunX - 6 : gunX + 10;
+      graphics.fillRect(muzzleX, gunY + 1, 4, 4);
+      // Extra glow effect
+      graphics.fillStyle(color.glow, 0.6);
+      graphics.fillCircle(muzzleX + 2, gunY + 3, 5);
+    }
+
+    graphics.generateTexture(textureName, width, height);
+    graphics.destroy();
   }
 
   private createAnimations(): void {

@@ -42,6 +42,10 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   private sneakersEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
   private weaponEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
 
+  // Power-up overlay sprites (visible equipment)
+  private sneakersOverlay?: Phaser.GameObjects.Sprite;
+  private gunOverlay?: Phaser.GameObjects.Sprite;
+
   // Invincibility frames after damage
   private iframesTimer?: Phaser.Time.TimerEvent;
   private iframesFlashTween?: Phaser.Tweens.Tween;
@@ -193,9 +197,13 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     // Create sneakers particle trail at feet (cyan speed lines)
     this.createSneakersEffect();
 
+    // Show sneakers overlay sprite (visible shoes on Bamster)
+    this.showSneakersOverlay();
+
     this.sneakersTimer = this.scene.time.delayedCall(POWERUP_DURATION, () => {
       this.jumpPower = 1;
       this.destroySneakersEffect();
+      this.hideSneakersOverlay();
       this.sneakersTimer = undefined;
     });
   }
@@ -219,9 +227,13 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     // Create weapon glow effect around gun
     this.createWeaponEffect(type);
 
+    // Show gun overlay sprite (visible upgraded gun)
+    this.showGunOverlay(type);
+
     this.weaponTimer = this.scene.time.delayedCall(POWERUP_DURATION, () => {
       this.weaponType = 'basic';
       this.destroyWeaponEffect();
+      this.hideGunOverlay();
       this.weaponTimer = undefined;
     });
   }
@@ -335,6 +347,8 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
     // Clean up power-up visual effects
     this.destroySneakersEffect();
     this.destroyWeaponEffect();
+    this.hideSneakersOverlay();
+    this.hideGunOverlay();
 
     // Disable physics collisions during death
     const body = this.body as Phaser.Physics.Arcade.Body;
@@ -411,6 +425,9 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
 
     // Update weapon emitter position based on facing direction
     this.updateWeaponEmitterPosition();
+
+    // Update power-up overlay positions
+    this.updateOverlayPositions();
   }
 
   /** Create sneakers power-up visual effect - cyan particle trail at feet */
@@ -481,6 +498,94 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   private updateWeaponEmitterPosition(): void {
     if (this.weaponEmitter) {
       this.weaponEmitter.followOffset.x = this.facingRight ? 14 : -14;
+    }
+  }
+
+  /** Show sneakers overlay sprite */
+  private showSneakersOverlay(): void {
+    // Destroy existing if any
+    this.hideSneakersOverlay();
+
+    const textureName = this.facingRight ? 'sneakers_overlay' : 'sneakers_overlay_left';
+    this.sneakersOverlay = this.scene.add.sprite(this.x, this.y + 18, textureName);
+    this.sneakersOverlay.setDepth(this.depth + 1);
+
+    // Add subtle pulsing glow effect
+    this.scene.tweens.add({
+      targets: this.sneakersOverlay,
+      alpha: { from: 1, to: 0.7 },
+      duration: 300,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    });
+  }
+
+  /** Hide sneakers overlay sprite */
+  private hideSneakersOverlay(): void {
+    if (this.sneakersOverlay) {
+      this.sneakersOverlay.destroy();
+      this.sneakersOverlay = undefined;
+    }
+  }
+
+  /** Show gun overlay sprite based on weapon type */
+  private showGunOverlay(type: 'rapid' | 'spread' | 'piercing'): void {
+    // Destroy existing if any
+    this.hideGunOverlay();
+
+    const textureBase = `gun_${type}`;
+    const textureName = this.facingRight ? textureBase : `${textureBase}_left`;
+    const offsetX = this.facingRight ? 12 : -12;
+
+    this.gunOverlay = this.scene.add.sprite(this.x + offsetX, this.y - 4, textureName);
+    this.gunOverlay.setDepth(this.depth + 1);
+    this.gunOverlay.setBlendMode(Phaser.BlendModes.ADD);
+
+    // Add pulsing glow effect
+    this.scene.tweens.add({
+      targets: this.gunOverlay,
+      alpha: { from: 1, to: 0.6 },
+      scaleX: { from: 1, to: 1.1 },
+      scaleY: { from: 1, to: 1.1 },
+      duration: 200,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    });
+  }
+
+  /** Hide gun overlay sprite */
+  private hideGunOverlay(): void {
+    if (this.gunOverlay) {
+      this.gunOverlay.destroy();
+      this.gunOverlay = undefined;
+    }
+  }
+
+  /** Update overlay positions to follow player */
+  private updateOverlayPositions(): void {
+    // Update sneakers overlay position and texture
+    if (this.sneakersOverlay) {
+      this.sneakersOverlay.setPosition(this.x, this.y + 18);
+      const expectedTexture = this.facingRight ? 'sneakers_overlay' : 'sneakers_overlay_left';
+      if (this.sneakersOverlay.texture.key !== expectedTexture) {
+        this.sneakersOverlay.setTexture(expectedTexture);
+      }
+    }
+
+    // Update gun overlay position and texture
+    if (this.gunOverlay) {
+      const offsetX = this.facingRight ? 12 : -12;
+      this.gunOverlay.setPosition(this.x + offsetX, this.y - 4);
+
+      // Update texture based on facing direction
+      const currentType = this.weaponType as 'rapid' | 'spread' | 'piercing';
+      const textureBase = `gun_${currentType}`;
+      const expectedTexture = this.facingRight ? textureBase : `${textureBase}_left`;
+      if (this.gunOverlay.texture.key !== expectedTexture) {
+        this.gunOverlay.setTexture(expectedTexture);
+      }
     }
   }
 

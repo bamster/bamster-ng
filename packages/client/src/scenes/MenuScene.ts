@@ -75,28 +75,39 @@ export class MenuScene extends Phaser.Scene {
     });
     subtitle.setOrigin(0.5);
 
-    // BAMster preview with glow
-    const bamster = this.add.image(GAME_WIDTH / 2, 220, 'bamster');
-    bamster.setScale(2.5);
+    // BAMster preview on the left side
+    const bamster = this.add.image(100, GAME_HEIGHT / 2 + 40, 'bamster');
+    bamster.setScale(3.5);
 
-    // Menu buttons - tighter spacing to fit all buttons
-    this.createButton(GAME_WIDTH / 2, 310, '► SINGLE PLAYER', () => {
+    // Add a gentle floating animation to BAMster
+    this.tweens.add({
+      targets: bamster,
+      y: GAME_HEIGHT / 2 + 50,
+      duration: 2000,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // Menu buttons - centered with comfortable spacing
+    const buttonX = GAME_WIDTH / 2 + 80; // Offset right to balance BAMster on left
+    this.createButton(buttonX, 220, '► SINGLE PLAYER', () => {
       this.startGame('single');
     });
 
-    this.createButton(GAME_WIDTH / 2, 362, '► LOCAL MULTIPLAYER', () => {
+    this.createButton(buttonX, 280, '► LOCAL MULTIPLAYER', () => {
       this.startGame('local');
     });
 
-    this.createButton(GAME_WIDTH / 2, 414, '► ONLINE PLAY', () => {
+    this.createButton(buttonX, 340, '► ONLINE PLAY', () => {
       this.scene.start('LobbyScene');
     });
 
-    this.createButton(GAME_WIDTH / 2, 466, '⚙ SETTINGS', () => {
+    this.createButton(buttonX, 400, '⚙ SETTINGS', () => {
       this.scene.start('SettingsScene');
     });
 
-    this.createButton(GAME_WIDTH / 2, 518, '🏆 ACHIEVEMENTS', () => {
+    this.createButton(buttonX, 460, '🏆 ACHIEVEMENTS', () => {
       this.scene.start('AchievementsScene');
     });
 

@@ -692,8 +692,8 @@ export class GameScene extends Phaser.Scene {
     frameGraphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH - cornerSize, PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH);
 
     // Panel title
-    const titleText = this.add.text(PLAY_AREA_WIDTH + (GAME_WIDTH - PLAY_AREA_WIDTH) / 2, 30, 'BAMster', {
-      fontSize: '28px',
+    const titleText = this.add.text(PLAY_AREA_WIDTH + (GAME_WIDTH - PLAY_AREA_WIDTH) / 2, 30, 'BAMster 2000', {
+      fontSize: '20px',
       fontFamily: 'monospace',
       color: '#ff00ff',
       stroke: '#ff88ff',

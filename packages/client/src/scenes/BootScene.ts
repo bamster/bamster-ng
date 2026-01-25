@@ -25,7 +25,7 @@ export class BootScene extends Phaser.Scene {
     }
 
     // Title
-    const title = this.add.text(width / 2, height / 2 - 80, 'BAMster', {
+    const title = this.add.text(width / 2, height / 2 - 80, 'BAMster 2000', {
       fontSize: '48px',
       fontFamily: 'monospace',
       color: '#ff00ff',

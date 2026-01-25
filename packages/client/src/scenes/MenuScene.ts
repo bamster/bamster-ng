@@ -41,14 +41,14 @@ export class MenuScene extends Phaser.Scene {
     }
 
     // Title with chrome/neon effect
-    const titleShadow = this.add.text(GAME_WIDTH / 2 + 4, 84, 'BAMster', {
+    const titleShadow = this.add.text(GAME_WIDTH / 2 + 4, 84, 'BAMster 2000', {
       fontSize: '72px',
       fontFamily: 'monospace',
       color: '#330033',
     });
     titleShadow.setOrigin(0.5);
 
-    const title = this.add.text(GAME_WIDTH / 2, 80, 'BAMster', {
+    const title = this.add.text(GAME_WIDTH / 2, 80, 'BAMster 2000', {
       fontSize: '72px',
       fontFamily: 'monospace',
       color: '#ff00ff',
@@ -58,7 +58,7 @@ export class MenuScene extends Phaser.Scene {
     title.setOrigin(0.5);
 
     // Glowing title effect
-    const titleGlow = this.add.text(GAME_WIDTH / 2, 80, 'BAMster', {
+    const titleGlow = this.add.text(GAME_WIDTH / 2, 80, 'BAMster 2000', {
       fontSize: '72px',
       fontFamily: 'monospace',
       color: '#ff00ff',

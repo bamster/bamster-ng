@@ -2325,6 +2325,34 @@ export class GameScene extends Phaser.Scene {
         this.blockSpawner.setFixedBlockColor(null);
       },
     });
+
+    // Super Bamster event - invincibility + double jump
+    this.eventManager.registerEvent({
+      id: 'super_bamster',
+      name: 'SUPER BAMSTER',
+      icon: '⭐',
+      duration: 15000, // 15 seconds
+      onStart: (_scene) => {
+        // Enable invincibility and double jump for all players
+        this.players.forEach((player) => {
+          player.invincible = true;
+          player.jumpPower = 2.0; // Double jump height
+          // Add glowing effect
+          player.setTint(0xffff00); // Golden glow
+        });
+      },
+      onEnd: (_scene) => {
+        // Remove invincibility and restore normal jump
+        this.players.forEach((player) => {
+          player.invincible = false;
+          // Only reset jump if sneakers aren't active
+          if (!player.hasSneakers()) {
+            player.jumpPower = 1.0;
+          }
+          player.clearTint();
+        });
+      },
+    });
   }
 
   /**

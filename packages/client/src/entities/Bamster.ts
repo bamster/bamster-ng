@@ -26,6 +26,7 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   public isDying: boolean = false;
   public facingRight: boolean = true;
   public unlimitedAmmo: boolean = false;
+  public invincible: boolean = false;
 
   private lastFireTime: number = 0;
   private laserGroup: Phaser.Physics.Arcade.Group;
@@ -224,6 +225,11 @@ export class Bamster extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(): boolean {
+    // Invincible players take no damage
+    if (this.invincible) {
+      return false;
+    }
+
     this.health -= 1;
     getSound().play('damage');
 

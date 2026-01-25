@@ -75,9 +75,10 @@ export class MenuScene extends Phaser.Scene {
     });
     subtitle.setOrigin(0.5);
 
-    // BAMster preview on the left side
-    const bamster = this.add.image(150, GAME_HEIGHT / 2 + 50, 'bamster');
+    // BAMster preview on the left side - use sprite with cape animation
+    const bamster = this.add.sprite(150, GAME_HEIGHT / 2 + 50, 'bamster');
     bamster.setScale(5);
+    bamster.play('bamster_run'); // Play running animation for cape movement
 
     // Add a gentle floating animation to BAMster
     this.tweens.add({

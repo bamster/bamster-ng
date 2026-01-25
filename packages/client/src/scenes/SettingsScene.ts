@@ -1,6 +1,14 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
-import { loadKeyBindings, getKeyDisplayName, type GameKeyBindings } from '../systems/KeyBindings';
+import {
+  loadKeyBindings,
+  saveKeyBindings,
+  resetKeyBindings,
+  getKeyDisplayName,
+  keyEventToString,
+  type GameKeyBindings,
+  type PlayerKeyBindings,
+} from '../systems/KeyBindings';
 
 // 80s color palette (matching other scenes)
 const COLORS = {
@@ -70,6 +78,12 @@ export class SettingsScene extends Phaser.Scene {
   private settings: GameSettings = { ...DEFAULT_SETTINGS };
   private sliderGraphics!: Phaser.GameObjects.Graphics;
 
+  // Key binding state
+  private keyBindings!: GameKeyBindings;
+  private waitingForKey: { player: 'player1' | 'player2'; action: keyof PlayerKeyBindings } | null = null;
+  private keyBindingTexts: Map<string, Phaser.GameObjects.Text> = new Map();
+  private keyBindingOverlay?: Phaser.GameObjects.Container;
+
   constructor() {
     super({ key: 'SettingsScene' });
   }
@@ -77,6 +91,11 @@ export class SettingsScene extends Phaser.Scene {
   create(): void {
     // Load saved settings
     this.loadSettings();
+
+    // Load key bindings
+    this.keyBindings = loadKeyBindings();
+    this.keyBindingTexts.clear();
+    this.waitingForKey = null;
 
     // Dark background with gradient effect
     const graphics = this.add.graphics();
@@ -140,46 +159,52 @@ export class SettingsScene extends Phaser.Scene {
     this.createDifficultySelector(GAME_WIDTH / 2, 340);
 
     // Controls section
-    this.add.text(GAME_WIDTH / 2, 390, '─── CONTROLS ───', {
-      fontSize: '16px',
+    this.add.text(GAME_WIDTH / 2, 390, '─── CONTROLS (click to rebind) ───', {
+      fontSize: '14px',
       fontFamily: 'monospace',
       color: '#00ffff',
     }).setOrigin(0.5);
 
-    // Load key bindings
-    const bindings: GameKeyBindings = loadKeyBindings();
-
-    // Controls display using actual bindings
-    const controlsData = [
-      { action: 'MOVE LEFT', key: `${getKeyDisplayName(bindings.player1.left)} / A` },
-      { action: 'MOVE RIGHT', key: `${getKeyDisplayName(bindings.player1.right)} / D` },
-      { action: 'JUMP', key: `${getKeyDisplayName(bindings.player1.jump)} / W` },
-      { action: 'SHOOT', key: getKeyDisplayName(bindings.player1.shoot) },
-      { action: 'PAUSE', key: 'ESC / P' },
-    ];
-
-    let controlY = 430;
-    controlsData.forEach((control) => {
-      this.add.text(GAME_WIDTH / 2 - 120, controlY, control.action, {
-        fontSize: '14px',
-        fontFamily: 'monospace',
-        color: '#888888',
-      });
-      this.add.text(GAME_WIDTH / 2 + 60, controlY, control.key, {
-        fontSize: '14px',
-        fontFamily: 'monospace',
-        color: '#ffff00',
-      });
-      controlY += 28;
-    });
-
-    // Player 2 controls
-    const p2Keys = `${getKeyDisplayName(bindings.player2.left)}${getKeyDisplayName(bindings.player2.jump)}${getKeyDisplayName(bindings.player2.right)} + ${getKeyDisplayName(bindings.player2.shoot)} (shoot)`;
-    this.add.text(GAME_WIDTH / 2, controlY + 20, `PLAYER 2: ${p2Keys}`, {
+    // Player 1 controls
+    this.add.text(GAME_WIDTH / 2 - 180, 415, 'P1:', {
       fontSize: '12px',
       fontFamily: 'monospace',
-      color: '#666666',
-    }).setOrigin(0.5);
+      color: '#ff00ff',
+    });
+    this.createKeyBinding(GAME_WIDTH / 2 - 120, 415, 'LEFT', 'player1', 'left');
+    this.createKeyBinding(GAME_WIDTH / 2 - 50, 415, 'RIGHT', 'player1', 'right');
+    this.createKeyBinding(GAME_WIDTH / 2 + 20, 415, 'JUMP', 'player1', 'jump');
+    this.createKeyBinding(GAME_WIDTH / 2 + 100, 415, 'SHOOT', 'player1', 'shoot');
+
+    // Player 2 controls
+    this.add.text(GAME_WIDTH / 2 - 180, 455, 'P2:', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#00ffff',
+    });
+    this.createKeyBinding(GAME_WIDTH / 2 - 120, 455, 'LEFT', 'player2', 'left');
+    this.createKeyBinding(GAME_WIDTH / 2 - 50, 455, 'RIGHT', 'player2', 'right');
+    this.createKeyBinding(GAME_WIDTH / 2 + 20, 455, 'JUMP', 'player2', 'jump');
+    this.createKeyBinding(GAME_WIDTH / 2 + 100, 455, 'SHOOT', 'player2', 'shoot');
+
+    // Reset to defaults button
+    this.createSmallButton(GAME_WIDTH / 2, 495, 'RESET TO DEFAULTS', () => {
+      this.keyBindings = resetKeyBindings();
+      this.updateAllKeyBindingTexts();
+    });
+
+    // Setup keyboard listener for rebinding
+    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+      if (this.waitingForKey) {
+        event.preventDefault();
+        const keyStr = keyEventToString(event);
+        this.keyBindings[this.waitingForKey.player][this.waitingForKey.action] = keyStr;
+        saveKeyBindings(this.keyBindings);
+        this.updateAllKeyBindingTexts();
+        this.hideKeyBindingOverlay();
+        this.waitingForKey = null;
+      }
+    });
 
     // Back button
     this.createButton(GAME_WIDTH / 2, GAME_HEIGHT - 60, '◄ BACK TO MENU', () => {
@@ -444,6 +469,125 @@ export class SettingsScene extends Phaser.Scene {
     } catch {
       // Ignore localStorage errors
     }
+  }
+
+  private createKeyBinding(
+    x: number,
+    y: number,
+    label: string,
+    player: 'player1' | 'player2',
+    action: keyof PlayerKeyBindings
+  ): void {
+    // Label above the key
+    this.add.text(x, y - 12, label, {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#888888',
+    }).setOrigin(0.5);
+
+    // Key display (clickable)
+    const keyText = this.add.text(x, y + 8, getKeyDisplayName(this.keyBindings[player][action]), {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: '#ffff00',
+      backgroundColor: '#2a0a4a',
+      padding: { x: 8, y: 4 },
+    });
+    keyText.setOrigin(0.5);
+    keyText.setInteractive({ useHandCursor: true });
+
+    // Store reference for updates
+    this.keyBindingTexts.set(`${player}_${action}`, keyText);
+
+    // Hover effects
+    keyText.on('pointerover', () => {
+      keyText.setStyle({ color: '#00ffff', backgroundColor: '#4a1a6a' });
+    });
+    keyText.on('pointerout', () => {
+      keyText.setStyle({ color: '#ffff00', backgroundColor: '#2a0a4a' });
+    });
+
+    // Click to rebind
+    keyText.on('pointerdown', () => {
+      this.waitingForKey = { player, action };
+      this.showKeyBindingOverlay(label);
+    });
+  }
+
+  private updateAllKeyBindingTexts(): void {
+    this.keyBindingTexts.forEach((text, key) => {
+      const [player, action] = key.split('_') as ['player1' | 'player2', keyof PlayerKeyBindings];
+      text.setText(getKeyDisplayName(this.keyBindings[player][action]));
+    });
+  }
+
+  private showKeyBindingOverlay(actionName: string): void {
+    this.hideKeyBindingOverlay();
+
+    this.keyBindingOverlay = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    this.keyBindingOverlay.setDepth(100);
+
+    // Dark overlay background
+    const bg = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.8);
+    this.keyBindingOverlay.add(bg);
+
+    // Prompt box
+    const box = this.add.rectangle(0, 0, 300, 100, COLORS.darkPurple);
+    box.setStrokeStyle(3, COLORS.neonCyan);
+    this.keyBindingOverlay.add(box);
+
+    // Prompt text
+    const prompt = this.add.text(0, -20, `Press key for ${actionName}`, {
+      fontSize: '18px',
+      fontFamily: 'monospace',
+      color: '#00ffff',
+    });
+    prompt.setOrigin(0.5);
+    this.keyBindingOverlay.add(prompt);
+
+    const hint = this.add.text(0, 15, '(ESC to cancel)', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#888888',
+    });
+    hint.setOrigin(0.5);
+    this.keyBindingOverlay.add(hint);
+
+    // Pulsing animation
+    this.tweens.add({
+      targets: box,
+      alpha: { from: 1, to: 0.7 },
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+    });
+  }
+
+  private hideKeyBindingOverlay(): void {
+    if (this.keyBindingOverlay) {
+      this.keyBindingOverlay.destroy();
+      this.keyBindingOverlay = undefined;
+    }
+  }
+
+  private createSmallButton(x: number, y: number, text: string, onClick: () => void): void {
+    const btn = this.add.text(x, y, text, {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#888888',
+      backgroundColor: '#1a0a2e',
+      padding: { x: 10, y: 5 },
+    });
+    btn.setOrigin(0.5);
+    btn.setInteractive({ useHandCursor: true });
+
+    btn.on('pointerover', () => {
+      btn.setStyle({ color: '#00ffff', backgroundColor: '#2a1a4e' });
+    });
+    btn.on('pointerout', () => {
+      btn.setStyle({ color: '#888888', backgroundColor: '#1a0a2e' });
+    });
+    btn.on('pointerdown', onClick);
   }
 }
 

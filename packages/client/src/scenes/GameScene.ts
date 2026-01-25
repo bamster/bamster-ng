@@ -1298,10 +1298,10 @@ export class GameScene extends Phaser.Scene {
         (PLAY_AREA_WIDTH * 3) / 4,
         GAME_HEIGHT - 100,
         'player2',
-        this.laserGroup
+        this.laserGroup,
+        2 // Player number 2 for correct textures (blue cape)
       );
       player2.health = difficultyConfig.startingHealth;
-      player2.setTint(0xaaaaff); // Slightly different color
       this.players.push(player2);
     }
   }

@@ -1444,13 +1444,8 @@ export class GameScene extends Phaser.Scene {
     const blockBody = block.body as Phaser.Physics.Arcade.Body;
     if (blockBody.velocity.y <= 0) return false;
 
-    // Block must be above the player's center (hitting head area)
-    // and horizontally overlapping
-    const blockBottom = block.y + BLOCK_SIZE / 2;
-    const playerTop = player.y - 15;
-
-    // Block bottom must be above player's upper body
-    if (blockBottom > playerTop) return false;
+    // Block center must be above player center (hitting from above, not side)
+    if (block.y > player.y) return false;
 
     // Check horizontal overlap - block must be mostly over the player
     const dx = Math.abs(block.x - player.x);

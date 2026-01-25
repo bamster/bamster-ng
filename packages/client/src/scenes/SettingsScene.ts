@@ -330,6 +330,9 @@ export class SettingsScene extends Phaser.Scene {
   private difficultyButtons: Phaser.GameObjects.Container[] = [];
 
   private createDifficultySelector(x: number, y: number): void {
+    // Clear old button references (important for scene restart)
+    this.difficultyButtons = [];
+
     const difficulties: Difficulty[] = ['easy', 'normal', 'hard'];
     const buttonWidth = 90;
     const spacing = 10;

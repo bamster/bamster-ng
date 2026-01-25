@@ -5,6 +5,7 @@ import type { PowerUpType } from '@bamster/shared';
 export class PowerUp extends Phaser.Physics.Arcade.Sprite {
   public powerUpId: string;
   public powerUpType: PowerUpType;
+  public isCollected: boolean = false;
 
   private static idCounter = 0;
 
@@ -42,6 +43,14 @@ export class PowerUp extends Phaser.Physics.Arcade.Sprite {
   }
 
   collect(): void {
+    // Prevent multiple collections during animation
+    if (this.isCollected) return;
+    this.isCollected = true;
+
+    // Disable physics body immediately to prevent further collisions
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.enable = false;
+
     // Visual effect
     this.scene.tweens.add({
       targets: this,

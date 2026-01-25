@@ -1742,6 +1742,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePlayerPowerUpCollision(player: Bamster, powerUp: PowerUp): void {
+    // Skip if already collected (prevents multiple triggers during collection animation)
+    if (powerUp.isCollected) return;
+
     // Apply power-up effect
     switch (powerUp.powerUpType) {
       case 'corn':

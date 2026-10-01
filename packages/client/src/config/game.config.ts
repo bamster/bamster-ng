@@ -17,11 +17,6 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    // Min/max ensures game doesn't get too small or pixelated
-    min: {
-      width: GAME_WIDTH / 2,
-      height: GAME_HEIGHT / 2,
-    },
     max: {
       width: GAME_WIDTH * 2,
       height: GAME_HEIGHT * 2,

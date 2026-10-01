@@ -17,8 +17,8 @@ app.get('/health', (_, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Colyseus monitor (admin UI) - only enable in non-production or with auth
-if (!isProduction || process.env.ENABLE_MONITOR === 'true') {
+// Never expose the unauthenticated admin UI in production.
+if (!isProduction) {
   app.use('/colyseus', monitor());
 }
 
@@ -33,10 +33,11 @@ const gameServer = new Server({
 // Register game room
 gameServer.define('game', GameRoom);
 gameServer.define('quickmatch', GameRoom).enableRealtimeListing();
+gameServer.define('private', GameRoom);
 
 httpServer.listen(port, () => {
   console.log(`BAMster server listening on port ${port}`);
-  if (!isProduction || process.env.ENABLE_MONITOR === 'true') {
+  if (!isProduction) {
     console.log(`Monitor available at http://localhost:${port}/colyseus`);
   }
 });

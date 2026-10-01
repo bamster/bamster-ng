@@ -1,14 +1,16 @@
 import { Room, Client } from '@colyseus/core';
 import { GameState, Player, Block, PowerUp, Laser } from '../schema/GameState';
 import {
-  GAME_WIDTH,
   GAME_HEIGHT,
+  PLAY_AREA_WIDTH,
+  FRAME_WIDTH,
   BLOCK_SIZE,
   BLOCK_COLORS,
   BLOCK_FALL_SPEED,
   BLOCK_SPAWN_INTERVAL,
   BAMSTER_SPEED,
   BAMSTER_JUMP_VELOCITY,
+  BAMSTER_STARTING_HEALTH,
   GRAVITY,
   LASER_SPEED,
   POWERUP_SPAWN_CHANCE,
@@ -21,6 +23,21 @@ interface PlayerInput {
   right: boolean;
   jump: boolean;
   shoot: boolean;
+}
+
+export function isPlayerInput(value: unknown): value is PlayerInput {
+  if (typeof value !== 'object' || value === null) return false;
+  const input = value as Record<string, unknown>;
+  return ['left', 'right', 'jump', 'shoot'].every((key) => typeof input[key] === 'boolean');
+}
+
+export function areOrthogonalNeighbors(a: Block, b: Block): boolean {
+  const dx = Math.abs(a.x - b.x);
+  const dy = Math.abs(a.y - b.y);
+  const tolerance = 1;
+  const horizontal = dx > 0 && dx <= BLOCK_SIZE && dy < tolerance;
+  const vertical = dy > 0 && dy <= BLOCK_SIZE && dx < tolerance;
+  return horizontal || vertical;
 }
 
 export class GameRoom extends Room<GameState> {
@@ -38,8 +55,10 @@ export class GameRoom extends Room<GameState> {
     this.setState(new GameState());
 
     // Handle player input
-    this.onMessage('input', (client: Client, input: PlayerInput) => {
-      this.handleInput(client.sessionId, input);
+    this.onMessage('input', (client: Client, input: unknown) => {
+      if (isPlayerInput(input)) {
+        this.handleInput(client.sessionId, input);
+      }
     });
 
     // Handle ready state
@@ -53,7 +72,7 @@ export class GameRoom extends Room<GameState> {
 
     // Handle restart request
     this.onMessage('restart', () => {
-      this.restartGame();
+      if (this.state.isGameOver) this.restartGame();
     });
   }
 
@@ -65,7 +84,8 @@ export class GameRoom extends Room<GameState> {
 
     // Position players on opposite sides
     const playerCount = this.state.players.size;
-    player.x = playerCount === 0 ? GAME_WIDTH / 4 : (GAME_WIDTH * 3) / 4;
+    const usableWidth = PLAY_AREA_WIDTH - FRAME_WIDTH * 2;
+    player.x = FRAME_WIDTH + (playerCount === 0 ? usableWidth / 4 : (usableWidth * 3) / 4);
     player.y = GAME_HEIGHT - 100;
 
     this.state.players.set(client.sessionId, player);
@@ -106,11 +126,13 @@ export class GameRoom extends Room<GameState> {
     this.state.isRunning = true;
     this.state.isGameOver = false;
     this.state.gameTime = 0;
+    this.currentFallSpeed = BLOCK_FALL_SPEED;
+    this.lastShootTime.clear();
 
     // Reset players
     this.state.players.forEach((player: Player) => {
       player.score = 0;
-      player.health = 1;
+      player.health = BAMSTER_STARTING_HEALTH;
       player.isAlive = true;
       player.weaponType = 'basic';
       player.jumpPower = 1;
@@ -171,7 +193,10 @@ export class GameRoom extends Room<GameState> {
       }
 
       // World bounds
-      player.x = Math.max(24, Math.min(GAME_WIDTH - 24, player.x));
+      player.x = Math.max(
+        FRAME_WIDTH + 20,
+        Math.min(PLAY_AREA_WIDTH - FRAME_WIDTH - 20, player.x)
+      );
 
       // Check if fallen off screen
       if (player.y > GAME_HEIGHT + 100) {
@@ -209,6 +234,28 @@ export class GameRoom extends Room<GameState> {
             this.tryMergeBlocks(block);
           }
         });
+
+        if (!block.isResting) {
+          let hitPlayer = false;
+          this.state.players.forEach((player: Player) => {
+            if (hitPlayer || !player.isAlive) return;
+
+            const hitsFromAbove = block.y <= player.y;
+            const overlapsPlayer =
+              Math.abs(block.x - player.x) < BLOCK_SIZE * 0.7 &&
+              Math.abs(block.y - player.y) < BLOCK_SIZE;
+
+            if (hitsFromAbove && overlapsPlayer) {
+              hitPlayer = true;
+              player.health -= 1;
+              if (player.health <= 0) {
+                player.isAlive = false;
+                this.checkGameOver();
+              }
+              this.state.blocks.delete(id);
+            }
+          });
+        }
       }
     }
 
@@ -221,7 +268,7 @@ export class GameRoom extends Room<GameState> {
       // Remove if off screen
       if (
         laser.x < -50 ||
-        laser.x > GAME_WIDTH + 50 ||
+        laser.x > PLAY_AREA_WIDTH + 50 ||
         laser.y < -50 ||
         laser.y > GAME_HEIGHT + 50
       ) {
@@ -278,6 +325,7 @@ export class GameRoom extends Room<GameState> {
   }
 
   private handleInput(playerId: string, input: PlayerInput): void {
+    if (!this.state.isRunning) return;
     const player = this.state.players.get(playerId);
     if (!player || !player.isAlive) return;
 
@@ -341,9 +389,10 @@ export class GameRoom extends Room<GameState> {
   private spawnBlock(): void {
     if (!this.state.isRunning) return;
 
-    const gridColumns = Math.floor(GAME_WIDTH / BLOCK_SIZE);
+    const usableWidth = PLAY_AREA_WIDTH - FRAME_WIDTH * 2;
+    const gridColumns = Math.floor(usableWidth / BLOCK_SIZE);
     const column = Math.floor(Math.random() * gridColumns);
-    const x = column * BLOCK_SIZE + BLOCK_SIZE / 2;
+    const x = FRAME_WIDTH + column * BLOCK_SIZE + BLOCK_SIZE / 2;
     const y = -BLOCK_SIZE;
 
     if (Math.random() < POWERUP_SPAWN_CHANCE) {
@@ -404,9 +453,7 @@ export class GameRoom extends Room<GameState> {
 
     const adjacent = restingBlocks.filter((other: Block) => {
       if (other.color !== block.color) return false;
-      const dx = Math.abs(other.x - block.x);
-      const dy = Math.abs(other.y - block.y);
-      return dx <= BLOCK_SIZE && dy <= BLOCK_SIZE;
+      return areOrthogonalNeighbors(block, other);
     });
 
     if (adjacent.length > 0) {
@@ -469,6 +516,8 @@ export class GameRoom extends Room<GameState> {
     this.state.isRunning = false;
     this.state.isGameOver = true;
     this.state.winnerId = winnerId || '';
+    this.state.lasers.clear();
+    this.lastShootTime.clear();
     this.stopGameLoop();
   }
 

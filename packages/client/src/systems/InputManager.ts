@@ -56,6 +56,8 @@ export class InputManager {
   // Touch buttons
   private jumpButton?: Phaser.GameObjects.Arc;
   private shootButton?: Phaser.GameObjects.Arc;
+  private jumpPointerId?: number;
+  private shootPointerId?: number;
   private shootPressed: boolean = false;
   private jumpJustPressed: boolean = false;
 
@@ -212,6 +214,7 @@ export class InputManager {
     this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       // Check if touch is on jump button
       if (this.jumpButton && this.isPointerOnButton(pointer, this.jumpButton)) {
+        this.jumpPointerId = pointer.id;
         this.jumpJustPressed = true;
         this.jumpButton.setFillStyle(0xff00ff, 0.7);
         return;
@@ -219,6 +222,7 @@ export class InputManager {
 
       // Check if touch is on shoot button
       if (this.shootButton && this.isPointerOnButton(pointer, this.shootButton)) {
+        this.shootPointerId = pointer.id;
         this.shootPressed = true;
         this.shootButton.setFillStyle(0xffff00, 0.7);
         return;
@@ -238,21 +242,30 @@ export class InputManager {
     });
 
     this.scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      // Check if releasing jump button - reset visual only
-      if (this.jumpButton && this.isPointerOnButton(pointer, this.jumpButton)) {
-        this.jumpButton.setFillStyle(0x333366, 0.5);
+      if (pointer.id === this.jumpPointerId) {
+        this.jumpPointerId = undefined;
+        this.jumpButton?.setFillStyle(0x333366, 0.5);
       }
 
-      // Check if releasing shoot button
-      if (this.shootButton && this.isPointerOnButton(pointer, this.shootButton)) {
+      if (pointer.id === this.shootPointerId) {
+        this.shootPointerId = undefined;
         this.shootPressed = false;
-        this.shootButton.setFillStyle(0x333366, 0.5);
+        this.shootButton?.setFillStyle(0x333366, 0.5);
       }
 
       // Release joystick
       if (this.joystickPointer && pointer.id === this.joystickPointer.id) {
         this.resetJoystick();
       }
+    });
+
+    this.scene.input.on('gameout', () => {
+      this.jumpPointerId = undefined;
+      this.shootPointerId = undefined;
+      this.shootPressed = false;
+      this.jumpButton?.setFillStyle(0x333366, 0.5);
+      this.shootButton?.setFillStyle(0x333366, 0.5);
+      this.resetJoystick();
     });
   }
 

@@ -12,6 +12,9 @@ interface GameOverData {
   mode: GameMode;
   scores: PlayerScore[];
   winner?: string;
+  isNewHighScore?: boolean;
+  localWon?: boolean;
+  localPlayerId?: string;
 }
 
 // 80s color palette
@@ -30,7 +33,7 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   create(data: GameOverData): void {
-    const { mode, scores, winner } = data;
+    const { mode, scores, winner, isNewHighScore, localWon, localPlayerId } = data;
 
     // Dark 80s background
     const graphics = this.add.graphics();
@@ -89,7 +92,7 @@ export class GameOverScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    // Winner announcement (for local multiplayer)
+    // Winner announcement
     let yPos = 160;
     if (mode === 'local' && winner) {
       const winnerNum = winner === 'player1' ? '1' : '2';
@@ -118,13 +121,34 @@ export class GameOverScene extends Phaser.Scene {
       });
 
       yPos += 60;
+    } else if (mode === 'online' && winner) {
+      const resultText = this.add.text(
+        GAME_WIDTH / 2,
+        yPos,
+        localWon ? '★ VICTORY! ★' : 'DEFEAT',
+        {
+          fontSize: '28px',
+          fontFamily: 'monospace',
+          color: localWon ? '#39ff14' : '#ff4466',
+          stroke: '#000000',
+          strokeThickness: 3,
+        }
+      );
+      resultText.setOrigin(0.5);
+      yPos += 60;
     }
 
     // Display scores
-    yPos = mode === 'local' ? 230 : 180;
+    yPos = mode === 'single' ? 180 : 230;
 
     scores.forEach((playerScore, index) => {
-      const playerLabel = mode === 'local' ? `PLAYER ${index + 1}` : 'FINAL';
+      const playerLabel = mode === 'single'
+        ? 'FINAL'
+        : mode === 'online'
+          ? playerScore.playerId === localPlayerId
+            ? 'YOU'
+            : 'OPPONENT'
+          : `PLAYER ${index + 1}`;
       const color = playerScore.isAlive ? '#39ff14' : '#ff4466';
 
       // Player label
@@ -155,11 +179,8 @@ export class GameOverScene extends Phaser.Scene {
     // High score (single player)
     if (mode === 'single') {
       const highScore = this.getHighScore();
-      const currentScore = scores[0]?.score || 0;
 
-      if (currentScore > highScore) {
-        this.setHighScore(currentScore);
-
+      if (isNewHighScore) {
         const newHighText = this.add.text(
           GAME_WIDTH / 2,
           yPos + 10,
@@ -294,11 +315,11 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   private getHighScore(): number {
-    const stored = localStorage.getItem('bamster_highscore');
-    return stored ? parseInt(stored, 10) : 0;
-  }
-
-  private setHighScore(score: number): void {
-    localStorage.setItem('bamster_highscore', score.toString());
+    try {
+      const stored = Number(localStorage.getItem('bamster_highscore'));
+      return Number.isFinite(stored) ? stored : 0;
+    } catch {
+      return 0;
+    }
   }
 }

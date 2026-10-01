@@ -165,9 +165,13 @@ export class GameScene extends Phaser.Scene {
     this.healthTexts = [];
     this.heartContainers = [];
     this.powerUpIndicators = [];
-    // Load high score from localStorage
-    const savedHighScore = localStorage.getItem('bamster_highscore');
-    this.highScore = savedHighScore ? parseInt(savedHighScore, 10) : 0;
+    // Storage may be unavailable in private browsing or embedded webviews.
+    try {
+      const savedHighScore = Number(localStorage.getItem('bamster_highscore'));
+      this.highScore = Number.isFinite(savedHighScore) ? savedHighScore : 0;
+    } catch {
+      this.highScore = 0;
+    }
 
     // Reset network state (or use provided from LobbyScene)
     this.networkManager = data.networkManager;
@@ -974,6 +978,7 @@ export class GameScene extends Phaser.Scene {
       winner: winnerId,
       isOnline: true,
       localWon,
+      localPlayerId: this.localPlayerId,
     });
   }
 
@@ -2163,11 +2168,16 @@ export class GameScene extends Phaser.Scene {
       isAlive: p.isAlive,
     }));
 
-    // Check for new high score (use highest score from all players)
+    // Keep the solo high score separate from multiplayer results.
     const maxScore = Math.max(...scores.map((s) => s.score));
-    if (maxScore > this.highScore) {
+    const isNewHighScore = this.mode === 'single' && maxScore > this.highScore;
+    if (isNewHighScore) {
       this.highScore = maxScore;
-      localStorage.setItem('bamster_highscore', this.highScore.toString());
+      try {
+        localStorage.setItem('bamster_highscore', this.highScore.toString());
+      } catch {
+        // The score still applies to this session when persistence is unavailable.
+      }
     }
 
     // End game stats session and trigger final achievements
@@ -2182,6 +2192,7 @@ export class GameScene extends Phaser.Scene {
       mode: this.mode,
       scores,
       winner: winner?.playerId,
+      isNewHighScore,
     });
   }
 

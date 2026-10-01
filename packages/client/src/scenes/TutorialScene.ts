@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
+import { getKeyDisplayName, loadKeyBindings } from '../systems/KeyBindings';
 
 // 80s color palette (matching other scenes)
 const COLORS = {
@@ -20,6 +21,9 @@ export class TutorialScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.currentPage = 0;
+    this.pages = [];
+
     // Dark background with grid
     const graphics = this.add.graphics();
     graphics.fillStyle(COLORS.background, 1);
@@ -50,12 +54,6 @@ export class TutorialScene extends Phaser.Scene {
     });
     title.setOrigin(0.5);
 
-    // Create tutorial pages
-    this.createPages();
-
-    // Show first page
-    this.showPage(0);
-
     // Page indicator
     this.pageIndicator = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 100, '', {
       fontSize: '14px',
@@ -63,7 +61,10 @@ export class TutorialScene extends Phaser.Scene {
       color: '#888888',
     });
     this.pageIndicator.setOrigin(0.5);
-    this.updatePageIndicator();
+
+    // Create tutorial pages after the indicator so showPage can update it.
+    this.createPages();
+    this.showPage(0);
 
     // Navigation buttons
     this.createNavButton(GAME_WIDTH / 2 - 100, GAME_HEIGHT - 50, '◄ PREV', () => {
@@ -86,16 +87,26 @@ export class TutorialScene extends Phaser.Scene {
   }
 
   private createPages(): void {
+    const bindings = loadKeyBindings();
+    const display = getKeyDisplayName;
+
     // Page 1: Basic Controls
     const page1 = this.add.container(0, 0);
     this.addPageTitle(page1, 'CONTROLS');
     this.addPageContent(page1, [
-      { key: '← →  or  A D', desc: 'Move left/right' },
-      { key: '↑  or  W', desc: 'Jump' },
-      { key: 'SPACE', desc: 'Shoot laser' },
-      { key: 'ESC  or  P', desc: 'Pause game' },
+      {
+        key: `${display(bindings.player1.left)} / ${display(bindings.player1.right)}`,
+        desc: 'Move left/right',
+      },
+      { key: display(bindings.player1.jump), desc: 'Jump' },
+      { key: display(bindings.player1.shoot), desc: 'Shoot laser' },
+      { key: display(bindings.pause), desc: 'Pause game' },
     ], 120);
-    this.addPageNote(page1, 'Player 2 uses WASD + E to shoot');
+    this.addPageNote(
+      page1,
+      `P2: ${display(bindings.player2.left)}/${display(bindings.player2.right)} move, ` +
+        `${display(bindings.player2.jump)} jump, ${display(bindings.player2.shoot)} fire`
+    );
     this.pages.push(page1);
 
     // Page 2: Objective

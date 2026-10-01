@@ -71,12 +71,51 @@ export function loadKeyBindings(): GameKeyBindings {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      return { ...DEFAULT_BINDINGS, ...JSON.parse(saved) };
+      const storedValue: unknown = JSON.parse(saved);
+      const parsed = isRecord(storedValue) ? storedValue : {};
+      const player1 = isRecord(parsed.player1) ? parsed.player1 : {};
+      const player2 = isRecord(parsed.player2) ? parsed.player2 : {};
+
+      return {
+        player1: loadPlayerBindings(player1, DEFAULT_BINDINGS.player1),
+        player2: loadPlayerBindings(player2, DEFAULT_BINDINGS.player2),
+        pause: getSavedKey(parsed.pause, DEFAULT_BINDINGS.pause),
+        screenshot: getSavedKey(parsed.screenshot, DEFAULT_BINDINGS.screenshot),
+      };
     }
   } catch {
     // Ignore parse errors
   }
-  return { ...DEFAULT_BINDINGS };
+  return cloneDefaultBindings();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function getSavedKey(value: unknown, fallback: string): string {
+  return typeof value === 'string' && value.length > 0 ? value : fallback;
+}
+
+function loadPlayerBindings(
+  saved: Record<string, unknown>,
+  defaults: PlayerKeyBindings
+): PlayerKeyBindings {
+  return {
+    left: getSavedKey(saved.left, defaults.left),
+    right: getSavedKey(saved.right, defaults.right),
+    jump: getSavedKey(saved.jump, defaults.jump),
+    shoot: getSavedKey(saved.shoot, defaults.shoot),
+  };
+}
+
+function cloneDefaultBindings(): GameKeyBindings {
+  return {
+    player1: { ...DEFAULT_BINDINGS.player1 },
+    player2: { ...DEFAULT_BINDINGS.player2 },
+    pause: DEFAULT_BINDINGS.pause,
+    screenshot: DEFAULT_BINDINGS.screenshot,
+  };
 }
 
 // Save key bindings to localStorage
@@ -90,7 +129,7 @@ export function saveKeyBindings(bindings: GameKeyBindings): void {
 
 // Reset to default bindings
 export function resetKeyBindings(): GameKeyBindings {
-  const defaults = { ...DEFAULT_BINDINGS };
+  const defaults = cloneDefaultBindings();
   saveKeyBindings(defaults);
   return defaults;
 }

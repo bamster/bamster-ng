@@ -167,23 +167,27 @@ export class MenuScene extends Phaser.Scene {
 
     // Menu buttons - centered with comfortable spacing
     const buttonX = GAME_WIDTH / 2 + 80; // Offset right to balance BAMster on left
-    this.createButton(buttonX, 220, '► SINGLE PLAYER', () => {
+    this.createButton(buttonX, 210, '► SINGLE PLAYER', () => {
       this.startGame('single');
     });
 
-    this.createButton(buttonX, 280, '► LOCAL MULTIPLAYER', () => {
+    this.createButton(buttonX, 265, '► LOCAL MULTIPLAYER', () => {
       this.startGame('local');
     });
 
-    this.createButton(buttonX, 340, '► ONLINE PLAY', () => {
+    this.createButton(buttonX, 320, '► ONLINE PLAY', () => {
       this.scene.start('LobbyScene');
     });
 
-    this.createButton(buttonX, 400, '⚙ SETTINGS', () => {
+    this.createButton(buttonX, 375, '? HOW TO PLAY', () => {
+      this.scene.start('TutorialScene');
+    });
+
+    this.createButton(buttonX, 430, '⚙ SETTINGS', () => {
       this.scene.start('SettingsScene');
     });
 
-    this.createButton(buttonX, 460, '🏆 ACHIEVEMENTS', () => {
+    this.createButton(buttonX, 485, '🏆 ACHIEVEMENTS', () => {
       this.scene.start('AchievementsScene');
     });
 

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
 import { getAchievements, type Achievement } from '../systems/AchievementManager';
 import { ALL_ACHIEVEMENTS } from '../data/achievements';
+import { createNeonTitle, drawRetroBackdrop } from '../ui/RetroUI';
 
 // 80s color palette
 const COLORS = {
@@ -14,7 +15,7 @@ const COLORS = {
   locked: 0x444444,
 };
 
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 5;
 
 export class AchievementsScene extends Phaser.Scene {
   private currentPage: number = 0;
@@ -34,42 +35,8 @@ export class AchievementsScene extends Phaser.Scene {
 
     this.currentPage = 0;
 
-    // Dark background with gradient effect
-    const graphics = this.add.graphics();
-    graphics.fillStyle(COLORS.background, 1);
-    graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Add scanlines effect
-    for (let i = 0; i < GAME_HEIGHT; i += 4) {
-      graphics.fillStyle(0x000000, 0.1);
-      graphics.fillRect(0, i, GAME_WIDTH, 2);
-    }
-
-    // Grid lines (80s style)
-    graphics.lineStyle(1, COLORS.neonPink, 0.15);
-    for (let x = 0; x < GAME_WIDTH; x += 40) {
-      graphics.lineBetween(x, 0, x, GAME_HEIGHT);
-    }
-    for (let y = 0; y < GAME_HEIGHT; y += 40) {
-      graphics.lineBetween(0, y, GAME_WIDTH, y);
-    }
-
-    // Title with chrome/neon effect
-    const titleShadow = this.add.text(GAME_WIDTH / 2 + 3, 43, 'ACHIEVEMENTS', {
-      fontSize: '40px',
-      fontFamily: 'monospace',
-      color: '#330033',
-    });
-    titleShadow.setOrigin(0.5);
-
-    const title = this.add.text(GAME_WIDTH / 2, 40, 'ACHIEVEMENTS', {
-      fontSize: '40px',
-      fontFamily: 'monospace',
-      color: '#ff00ff',
-      stroke: '#ff88ff',
-      strokeThickness: 3,
-    });
-    title.setOrigin(0.5);
+    const graphics = drawRetroBackdrop(this);
+    createNeonTitle(this, 'ACHIEVEMENTS', 48, 40, '// TROPHY ARCHIVE');
 
     // Progress stats
     const progress = achievementManager.getProgress();
@@ -98,7 +65,7 @@ export class AchievementsScene extends Phaser.Scene {
 
     const fillWidth = (progress.unlocked / Math.max(progress.total, 1)) * barWidth;
     graphics.fillStyle(COLORS.neonCyan, 0.8);
-    graphics.fillRect(barX + 2, barY + 2, fillWidth - 4, barHeight - 4);
+    graphics.fillRect(barX + 2, barY + 2, Math.max(0, fillWidth - 4), barHeight - 4);
 
     // Create achievement list
     this.createAchievementList();
@@ -222,7 +189,7 @@ export class AchievementsScene extends Phaser.Scene {
       const unlockText = this.add.text(itemWidth / 2 - 20, 0, dateStr, {
         fontSize: '10px',
         fontFamily: 'monospace',
-        color: '#666666',
+        color: '#9999aa',
       });
       unlockText.setOrigin(1, 0.5);
       container.add(unlockText);

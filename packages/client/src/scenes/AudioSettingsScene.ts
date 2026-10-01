@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
+import { createNeonTitle, createPanel, drawRetroBackdrop } from '../ui/RetroUI';
 
 // 80s color palette (matching other scenes)
 const COLORS = {
@@ -33,42 +34,9 @@ export class AudioSettingsScene extends Phaser.Scene {
   create(): void {
     this.loadSettings();
 
-    // Dark background with gradient effect
-    const graphics = this.add.graphics();
-    graphics.fillStyle(COLORS.background, 1);
-    graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Add scanlines effect
-    for (let i = 0; i < GAME_HEIGHT; i += 4) {
-      graphics.fillStyle(0x000000, 0.1);
-      graphics.fillRect(0, i, GAME_WIDTH, 2);
-    }
-
-    // Grid lines (80s style)
-    graphics.lineStyle(1, COLORS.neonPink, 0.15);
-    for (let x = 0; x < GAME_WIDTH; x += 40) {
-      graphics.lineBetween(x, 0, x, GAME_HEIGHT);
-    }
-    for (let y = 0; y < GAME_HEIGHT; y += 40) {
-      graphics.lineBetween(0, y, GAME_WIDTH, y);
-    }
-
-    // Title
-    const titleShadow = this.add.text(GAME_WIDTH / 2 + 3, 83, 'AUDIO SETTINGS', {
-      fontSize: '40px',
-      fontFamily: 'monospace',
-      color: '#330033',
-    });
-    titleShadow.setOrigin(0.5);
-
-    const title = this.add.text(GAME_WIDTH / 2, 80, 'AUDIO SETTINGS', {
-      fontSize: '40px',
-      fontFamily: 'monospace',
-      color: '#ff00ff',
-      stroke: '#ff88ff',
-      strokeThickness: 3,
-    });
-    title.setOrigin(0.5);
+    drawRetroBackdrop(this);
+    createNeonTitle(this, 'AUDIO', 62, 46, '// SIGNAL MIXER');
+    createPanel(this, GAME_WIDTH / 2, 280, 470, 300);
 
     // Graphics for sliders
     this.sliderGraphics = this.add.graphics();
@@ -177,10 +145,25 @@ export class AudioSettingsScene extends Phaser.Scene {
       // Filled portion
       const fillWidth = value * sliderWidth;
       this.sliderGraphics.fillStyle(COLORS.neonCyan, 0.6);
-      this.sliderGraphics.fillRect(sliderX + 2, y - sliderHeight / 2 + 2, fillWidth - 4, sliderHeight - 4);
+      this.sliderGraphics.fillRect(
+        sliderX + 2,
+        y - sliderHeight / 2 + 2,
+        Math.max(0, fillWidth - 4),
+        sliderHeight - 4
+      );
+
+      for (let tick = 0; tick <= 4; tick++) {
+        const tickX = sliderX + (sliderWidth * tick) / 4;
+        this.sliderGraphics.lineStyle(1, 0xffffff, 0.25);
+        this.sliderGraphics.lineBetween(tickX, y + 11, tickX, y + 15);
+      }
 
       // Handle
-      const handleX = sliderX + fillWidth - handleWidth / 2;
+      const handleX = Phaser.Math.Clamp(
+        sliderX + fillWidth - handleWidth / 2,
+        sliderX,
+        sliderX + sliderWidth - handleWidth
+      );
       this.sliderGraphics.fillStyle(COLORS.neonYellow, 1);
       this.sliderGraphics.fillRect(handleX, y - sliderHeight / 2 - 2, handleWidth, sliderHeight + 4);
     });

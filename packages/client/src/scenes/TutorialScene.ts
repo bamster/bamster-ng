@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
 import { getKeyDisplayName, loadKeyBindings } from '../systems/KeyBindings';
+import { createNeonTitle, createPanel, drawRetroBackdrop } from '../ui/RetroUI';
 
 // 80s color palette (matching other scenes)
 const COLORS = {
@@ -24,35 +25,9 @@ export class TutorialScene extends Phaser.Scene {
     this.currentPage = 0;
     this.pages = [];
 
-    // Dark background with grid
-    const graphics = this.add.graphics();
-    graphics.fillStyle(COLORS.background, 1);
-    graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Scanlines
-    for (let i = 0; i < GAME_HEIGHT; i += 4) {
-      graphics.fillStyle(0x000000, 0.1);
-      graphics.fillRect(0, i, GAME_WIDTH, 2);
-    }
-
-    // Grid lines
-    graphics.lineStyle(1, COLORS.neonPink, 0.1);
-    for (let x = 0; x < GAME_WIDTH; x += 40) {
-      graphics.lineBetween(x, 0, x, GAME_HEIGHT);
-    }
-    for (let y = 0; y < GAME_HEIGHT; y += 40) {
-      graphics.lineBetween(0, y, GAME_WIDTH, y);
-    }
-
-    // Title
-    const title = this.add.text(GAME_WIDTH / 2, 40, 'HOW TO PLAY', {
-      fontSize: '36px',
-      fontFamily: 'monospace',
-      color: '#ff00ff',
-      stroke: '#ff88ff',
-      strokeThickness: 2,
-    });
-    title.setOrigin(0.5);
+    drawRetroBackdrop(this);
+    createNeonTitle(this, 'HOW TO PLAY', 48, 40, '// ARCADE MANUAL');
+    createPanel(this, GAME_WIDTH / 2, 280, 520, 360);
 
     // Page indicator
     this.pageIndicator = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 100, '', {
@@ -217,6 +192,8 @@ export class TutorialScene extends Phaser.Scene {
   }
 
   private createNavButton(x: number, y: number, label: string, onClick: () => void): void {
+    const bg = this.add.rectangle(x, y, 90, 34, COLORS.darkPurple, 0.9);
+    bg.setStrokeStyle(1, COLORS.neonPink, 0.7);
     const text = this.add.text(x, y, label, {
       fontSize: '16px',
       fontFamily: 'monospace',
@@ -227,10 +204,12 @@ export class TutorialScene extends Phaser.Scene {
 
     text.on('pointerover', () => {
       text.setColor('#00ffff');
+      bg.setStrokeStyle(2, COLORS.neonCyan, 1);
     });
 
     text.on('pointerout', () => {
       text.setColor('#888888');
+      bg.setStrokeStyle(1, COLORS.neonPink, 0.7);
     });
 
     text.on('pointerdown', onClick);

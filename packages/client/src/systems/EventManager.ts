@@ -411,12 +411,12 @@ export class EventManager {
       fillColor = 0xffff00; // Yellow in middle
     }
 
-    if (fillWidth > 0) {
+    if (fillWidth > 2) {
       this.timerBar.fillStyle(fillColor, 0.8);
       this.timerBar.fillRect(
         -this.timerBarWidth / 2 + 1,
         21,
-        fillWidth - 2,
+        Math.max(0, fillWidth - 2),
         this.timerBarHeight - 2
       );
     }

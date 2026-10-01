@@ -34,6 +34,7 @@ import { getAchievements } from '../systems/AchievementManager';
 import { getGameStats } from '../systems/GameStats';
 import { AchievementPopup } from '../ui/AchievementPopup';
 import { ALL_ACHIEVEMENTS } from '../data/achievements';
+import { getKeyDisplayName, loadKeyBindings } from '../systems/KeyBindings';
 
 // 80s color palette
 const COLORS = {
@@ -699,7 +700,7 @@ export class GameScene extends Phaser.Scene {
     frameGraphics.lineBetween(PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH - cornerSize, PLAY_AREA_WIDTH - FRAME_WIDTH, GAME_HEIGHT - FRAME_WIDTH);
 
     // Panel title
-    const titleText = this.add.text(PLAY_AREA_WIDTH + (GAME_WIDTH - PLAY_AREA_WIDTH) / 2, 30, 'BAMster 2000', {
+    const titleText = this.add.text(PLAY_AREA_WIDTH + (GAME_WIDTH - PLAY_AREA_WIDTH) / 2, 30, 'BAMster 2OOO', {
       fontSize: '20px',
       fontFamily: 'monospace',
       color: '#ff00ff',
@@ -885,7 +886,7 @@ export class GameScene extends Phaser.Scene {
     this.add.text(panelCenterX, 90, `ROOM: ${roomId.slice(0, 8)}`, {
       fontSize: '10px',
       fontFamily: 'monospace',
-      color: '#666666',
+      color: '#9999aa',
     }).setOrigin(0.5);
 
     // Player 1 (You) UI
@@ -943,7 +944,7 @@ export class GameScene extends Phaser.Scene {
     this.add.text(panelCenterX, controlsY, 'ESC TO QUIT', {
       fontSize: '11px',
       fontFamily: 'monospace',
-      color: '#666666',
+      color: '#9999aa',
     }).setOrigin(0.5);
   }
 
@@ -1807,7 +1808,7 @@ export class GameScene extends Phaser.Scene {
   private showScorePopup(x: number, y: number, score: number): void {
     const text = this.add.text(x, y, `+${score}`, {
       fontSize: '20px',
-      fontFamily: 'Arial',
+      fontFamily: 'monospace',
       color: '#ffff00',
       stroke: '#000000',
       strokeThickness: 3,
@@ -1835,7 +1836,7 @@ export class GameScene extends Phaser.Scene {
 
     const text = this.add.text(x, y, names[type] || type, {
       fontSize: '16px',
-      fontFamily: 'Arial',
+      fontFamily: 'monospace',
       color: '#00ff00',
       stroke: '#000000',
       strokeThickness: 3,
@@ -1970,26 +1971,24 @@ export class GameScene extends Phaser.Scene {
 
     // Controls hint at bottom of panel
     const controlsY = GAME_HEIGHT - 120;
+    const bindings = loadKeyBindings();
+    const controls = this.sys.game.device.input.touch
+      ? ['TOUCH CONTROLS', 'ACTIVE']
+      : [
+          `${getKeyDisplayName(bindings.player1.left)}/${getKeyDisplayName(bindings.player1.right)} MOVE`,
+          `${getKeyDisplayName(bindings.player1.jump)} JUMP`,
+          `${getKeyDisplayName(bindings.player1.shoot)} FIRE`,
+        ];
     this.add.text(panelCenterX, controlsY, 'CONTROLS', {
       fontSize: '12px',
       fontFamily: 'monospace',
       color: '#888888',
     }).setOrigin(0.5);
-    this.add.text(panelCenterX, controlsY + 20, '← → MOVE', {
+    controls.forEach((label, index) => this.add.text(panelCenterX, controlsY + 20 + index * 15, label, {
       fontSize: '11px',
       fontFamily: 'monospace',
-      color: '#666666',
-    }).setOrigin(0.5);
-    this.add.text(panelCenterX, controlsY + 35, '↑ / W JUMP', {
-      fontSize: '11px',
-      fontFamily: 'monospace',
-      color: '#666666',
-    }).setOrigin(0.5);
-    this.add.text(panelCenterX, controlsY + 50, 'SPACE SHOOT', {
-      fontSize: '11px',
-      fontFamily: 'monospace',
-      color: '#666666',
-    }).setOrigin(0.5);
+      color: '#9999aa',
+    }).setOrigin(0.5));
   }
 
   private updateUI(): void {

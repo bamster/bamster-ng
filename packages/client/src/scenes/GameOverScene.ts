@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
 import type { GameMode } from './MenuScene';
+import { createPanel, drawRetroBackdrop } from '../ui/RetroUI';
 
 interface PlayerScore {
   playerId: string;
@@ -35,25 +36,7 @@ export class GameOverScene extends Phaser.Scene {
   create(data: GameOverData): void {
     const { mode, scores, winner, isNewHighScore, localWon, localPlayerId } = data;
 
-    // Dark 80s background
-    const graphics = this.add.graphics();
-    graphics.fillStyle(COLORS.background, 0.95);
-    graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Add scanlines
-    for (let i = 0; i < GAME_HEIGHT; i += 4) {
-      graphics.fillStyle(0x000000, 0.15);
-      graphics.fillRect(0, i, GAME_WIDTH, 2);
-    }
-
-    // Grid effect
-    graphics.lineStyle(1, COLORS.neonPink, 0.1);
-    for (let x = 0; x < GAME_WIDTH; x += 40) {
-      graphics.lineBetween(x, 0, x, GAME_HEIGHT);
-    }
-    for (let y = 0; y < GAME_HEIGHT; y += 40) {
-      graphics.lineBetween(0, y, GAME_WIDTH, y);
-    }
+    drawRetroBackdrop(this);
 
     // Game Over title with neon effect
     const titleShadow = this.add.text(GAME_WIDTH / 2 + 4, 84, 'GAME OVER', {
@@ -81,6 +64,9 @@ export class GameOverScene extends Phaser.Scene {
     titleGlow.setOrigin(0.5);
     titleGlow.setAlpha(0.3);
     titleGlow.setBlendMode(Phaser.BlendModes.ADD);
+
+    const scorePanelHeight = mode === 'single' ? 220 : 280;
+    createPanel(this, GAME_WIDTH / 2, 280, 430, scorePanelHeight, COLORS.neonPink);
 
     // Pulsing glow animation
     this.tweens.add({
@@ -245,7 +231,7 @@ export class GameOverScene extends Phaser.Scene {
       {
         fontSize: '12px',
         fontFamily: 'monospace',
-        color: '#444466',
+        color: '#8888aa',
       }
     );
     hintText.setOrigin(0.5);

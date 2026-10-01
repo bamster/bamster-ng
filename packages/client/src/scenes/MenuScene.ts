@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
 import { getSound } from '../systems/SoundManager';
+import { drawRetroBackdrop } from '../ui/RetroUI';
 
 export type GameMode = 'single' | 'local' | 'online';
 
@@ -20,25 +21,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Dark background with gradient effect
-    const graphics = this.add.graphics();
-    graphics.fillStyle(COLORS.background, 1);
-    graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Add scanlines effect
-    for (let i = 0; i < GAME_HEIGHT; i += 4) {
-      graphics.fillStyle(0x000000, 0.1);
-      graphics.fillRect(0, i, GAME_WIDTH, 2);
-    }
-
-    // Grid lines (80s style)
-    graphics.lineStyle(1, COLORS.neonPink, 0.15);
-    for (let x = 0; x < GAME_WIDTH; x += 40) {
-      graphics.lineBetween(x, 0, x, GAME_HEIGHT);
-    }
-    for (let y = 0; y < GAME_HEIGHT; y += 40) {
-      graphics.lineBetween(0, y, GAME_WIDTH, y);
-    }
+    drawRetroBackdrop(this);
 
     // Title with chrome/neon effect - split into "BAMster" and "2OOO"
     const titleX = GAME_WIDTH / 2 - 100;
@@ -167,15 +150,15 @@ export class MenuScene extends Phaser.Scene {
 
     // Menu buttons - centered with comfortable spacing
     const buttonX = GAME_WIDTH / 2 + 80; // Offset right to balance BAMster on left
-    this.createButton(buttonX, 210, '► SINGLE PLAYER', () => {
+    this.createButton(buttonX, 210, '[1P] SINGLE PLAYER', () => {
       this.startGame('single');
     });
 
-    this.createButton(buttonX, 265, '► LOCAL MULTIPLAYER', () => {
+    this.createButton(buttonX, 265, '[2P] LOCAL MULTIPLAYER', () => {
       this.startGame('local');
     });
 
-    this.createButton(buttonX, 320, '► ONLINE PLAY', () => {
+    this.createButton(buttonX, 320, '[NET] ONLINE PLAY', () => {
       this.scene.start('LobbyScene');
     });
 
@@ -183,11 +166,11 @@ export class MenuScene extends Phaser.Scene {
       this.scene.start('TutorialScene');
     });
 
-    this.createButton(buttonX, 430, '⚙ SETTINGS', () => {
+    this.createButton(buttonX, 430, '[CFG] SETTINGS', () => {
       this.scene.start('SettingsScene');
     });
 
-    this.createButton(buttonX, 485, '🏆 ACHIEVEMENTS', () => {
+    this.createButton(buttonX, 485, '[★] ACHIEVEMENTS', () => {
       this.scene.start('AchievementsScene');
     });
 
@@ -236,7 +219,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Subtitle color cycling
     this.time.addEvent({
-      delay: 500,
+      delay: 1200,
       callback: () => {
         const colors = ['#00ffff', '#ff00ff', '#ffff00', '#ff6600'];
         const current = colors.indexOf(subtitle.style.color as string);

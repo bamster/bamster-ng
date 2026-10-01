@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BLOCK_SIZE, BLOCK_COLORS } from '@bamster/shared';
+import { drawRetroBackdrop } from '../ui/RetroUI';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -10,22 +11,10 @@ export class BootScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // Dark 80s background
-    const bg = this.add.graphics();
-    bg.fillStyle(0x0a0a1a, 1);
-    bg.fillRect(0, 0, width, height);
-
-    // Grid effect
-    bg.lineStyle(1, 0xff00ff, 0.1);
-    for (let x = 0; x < width; x += 40) {
-      bg.lineBetween(x, 0, x, height);
-    }
-    for (let y = 0; y < height; y += 40) {
-      bg.lineBetween(0, y, width, y);
-    }
+    const bg = drawRetroBackdrop(this);
 
     // Title
-    const title = this.add.text(width / 2, height / 2 - 80, 'BAMster 2000', {
+    const title = this.add.text(width / 2, height / 2 - 80, 'BAMster 2OOO', {
       fontSize: '48px',
       fontFamily: 'monospace',
       color: '#ff00ff',

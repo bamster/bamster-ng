@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
 import { NetworkManager, type NetworkState } from '../systems/NetworkManager';
+import { createNeonTitle, drawRetroBackdrop } from '../ui/RetroUI';
 
 // 80s color palette
 const COLORS = {
@@ -60,42 +61,11 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   private createBackground(): void {
-    const graphics = this.add.graphics();
-    graphics.fillStyle(COLORS.background, 1);
-    graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Add scanlines effect
-    for (let i = 0; i < GAME_HEIGHT; i += 4) {
-      graphics.fillStyle(0x000000, 0.1);
-      graphics.fillRect(0, i, GAME_WIDTH, 2);
-    }
-
-    // Grid lines (80s style)
-    graphics.lineStyle(1, COLORS.neonPink, 0.15);
-    for (let x = 0; x < GAME_WIDTH; x += 40) {
-      graphics.lineBetween(x, 0, x, GAME_HEIGHT);
-    }
-    for (let y = 0; y < GAME_HEIGHT; y += 40) {
-      graphics.lineBetween(0, y, GAME_WIDTH, y);
-    }
+    drawRetroBackdrop(this);
   }
 
   private createTitle(): void {
-    const titleShadow = this.add.text(GAME_WIDTH / 2 + 3, 53, 'ONLINE PLAY', {
-      fontSize: '48px',
-      fontFamily: 'monospace',
-      color: '#330033',
-    });
-    titleShadow.setOrigin(0.5);
-
-    const title = this.add.text(GAME_WIDTH / 2, 50, 'ONLINE PLAY', {
-      fontSize: '48px',
-      fontFamily: 'monospace',
-      color: '#ff00ff',
-      stroke: '#ff88ff',
-      strokeThickness: 3,
-    });
-    title.setOrigin(0.5);
+    createNeonTitle(this, 'ONLINE PLAY', 58, 46, '// NETWORK TERMINAL');
   }
 
   private clearButtons(): void {
@@ -130,19 +100,19 @@ export class LobbyScene extends Phaser.Scene {
     this.buttons.push(subtitle as unknown as Phaser.GameObjects.Container);
 
     this.buttons.push(
-      this.createButton(GAME_WIDTH / 2, 200, '⚡ QUICK MATCH', 'Find an opponent instantly', () => {
+      this.createButton(GAME_WIDTH / 2, 200, '[FAST] QUICK MATCH', 'Find an opponent instantly', () => {
         this.startQuickMatch();
       })
     );
 
     this.buttons.push(
-      this.createButton(GAME_WIDTH / 2, 290, '🏠 CREATE ROOM', 'Get a code to share with a friend', () => {
+      this.createButton(GAME_WIDTH / 2, 290, '[HOST] CREATE ROOM', 'Get a code to share with a friend', () => {
         this.createPrivateRoom();
       })
     );
 
     this.buttons.push(
-      this.createButton(GAME_WIDTH / 2, 380, '🔗 JOIN ROOM', 'Enter a room code', () => {
+      this.createButton(GAME_WIDTH / 2, 380, '[LINK] JOIN ROOM', 'Enter a room code', () => {
         this.showJoinRoom();
       })
     );
@@ -157,7 +127,7 @@ export class LobbyScene extends Phaser.Scene {
     const hint = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 30, 'PRESS ESC TO GO BACK', {
       fontSize: '12px',
       fontFamily: 'monospace',
-      color: '#666666',
+      color: '#9999aa',
     });
     hint.setOrigin(0.5);
     this.buttons.push(hint as unknown as Phaser.GameObjects.Container);
@@ -428,7 +398,7 @@ export class LobbyScene extends Phaser.Scene {
     const hint = this.add.text(GAME_WIDTH / 2, 340, 'Type the code and press ENTER to join', {
       fontSize: '12px',
       fontFamily: 'monospace',
-      color: '#666666',
+      color: '#9999aa',
     });
     hint.setOrigin(0.5);
     this.buttons.push(hint as unknown as Phaser.GameObjects.Container);

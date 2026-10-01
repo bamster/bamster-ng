@@ -9,6 +9,7 @@ import {
   type GameKeyBindings,
   type PlayerKeyBindings,
 } from '../systems/KeyBindings';
+import { createNeonTitle, drawRetroBackdrop } from '../ui/RetroUI';
 
 // 80s color palette (matching other scenes)
 const COLORS = {
@@ -100,42 +101,8 @@ export class SettingsScene extends Phaser.Scene {
     this.keyBindingTexts.clear();
     this.waitingForKey = null;
 
-    // Dark background with gradient effect
-    const graphics = this.add.graphics();
-    graphics.fillStyle(COLORS.background, 1);
-    graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Add scanlines effect
-    for (let i = 0; i < GAME_HEIGHT; i += 4) {
-      graphics.fillStyle(0x000000, 0.1);
-      graphics.fillRect(0, i, GAME_WIDTH, 2);
-    }
-
-    // Grid lines (80s style)
-    graphics.lineStyle(1, COLORS.neonPink, 0.15);
-    for (let x = 0; x < GAME_WIDTH; x += 40) {
-      graphics.lineBetween(x, 0, x, GAME_HEIGHT);
-    }
-    for (let y = 0; y < GAME_HEIGHT; y += 40) {
-      graphics.lineBetween(0, y, GAME_WIDTH, y);
-    }
-
-    // Title with chrome/neon effect
-    const titleShadow = this.add.text(GAME_WIDTH / 2 + 3, 53, 'SETTINGS', {
-      fontSize: '48px',
-      fontFamily: 'monospace',
-      color: '#330033',
-    });
-    titleShadow.setOrigin(0.5);
-
-    const title = this.add.text(GAME_WIDTH / 2, 50, 'SETTINGS', {
-      fontSize: '48px',
-      fontFamily: 'monospace',
-      color: '#ff00ff',
-      stroke: '#ff88ff',
-      strokeThickness: 3,
-    });
-    title.setOrigin(0.5);
+    drawRetroBackdrop(this);
+    createNeonTitle(this, 'SETTINGS', 55, 46, '// SYSTEM CONFIG');
 
     // Audio settings button (opens sub-menu)
     this.createMenuButton(GAME_WIDTH / 2, 115, 'AUDIO SETTINGS ►', () => {
@@ -199,7 +166,7 @@ export class SettingsScene extends Phaser.Scene {
     this.createGlobalKeyBinding(GAME_WIDTH / 2 - 60, 480, 'screenshot');
 
     // Reset to defaults button
-    this.createSmallButton(GAME_WIDTH / 2, 515, 'RESET CONTROLS', () => {
+    this.createSmallButton(GAME_WIDTH / 2 - 150, 545, 'RESET CONTROLS', () => {
       this.keyBindings = resetKeyBindings();
       this.updateAllKeyBindingTexts();
     });
@@ -231,7 +198,7 @@ export class SettingsScene extends Phaser.Scene {
     });
 
     // Back button
-    this.createButton(GAME_WIDTH / 2, GAME_HEIGHT - 60, '◄ BACK TO MENU', () => {
+    this.createButton(GAME_WIDTH / 2 + 120, 545, '◄ BACK TO MENU', () => {
       this.saveSettings();
       this.scene.start('MenuScene');
     });

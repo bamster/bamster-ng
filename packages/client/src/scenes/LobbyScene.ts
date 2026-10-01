@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
 import { NetworkManager, type NetworkState } from '../systems/NetworkManager';
-import { createNeonTitle, drawRetroBackdrop } from '../ui/RetroUI';
+import { createNeonTitle, createRetroButton, drawRetroBackdrop } from '../ui/RetroUI';
 
 // 80s color palette
 const COLORS = {
@@ -140,49 +140,13 @@ export class LobbyScene extends Phaser.Scene {
     subtitle: string,
     onClick: () => void
   ): Phaser.GameObjects.Container {
-    const container = this.add.container(x, y);
-
     const height = subtitle ? 60 : 45;
-    const bg = this.add.rectangle(0, 0, 320, height, COLORS.darkPurple);
-    bg.setStrokeStyle(2, COLORS.neonPink);
-
-    const label = this.add.text(0, subtitle ? -10 : 0, text, {
-      fontSize: '20px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
+    return createRetroButton(this, x, y, text, onClick, {
+      width: 340,
+      height,
+      subtitle: subtitle || undefined,
+      fontSize: 19,
     });
-    label.setOrigin(0.5);
-
-    container.add([bg, label]);
-
-    if (subtitle) {
-      const sub = this.add.text(0, 12, subtitle, {
-        fontSize: '12px',
-        fontFamily: 'monospace',
-        color: '#888888',
-      });
-      sub.setOrigin(0.5);
-      container.add(sub);
-    }
-
-    container.setSize(320, height);
-    container.setInteractive({ useHandCursor: true });
-
-    container.on('pointerover', () => {
-      bg.setFillStyle(0x4a1a6a);
-      bg.setStrokeStyle(3, COLORS.neonCyan);
-      label.setColor('#00ffff');
-    });
-
-    container.on('pointerout', () => {
-      bg.setFillStyle(COLORS.darkPurple);
-      bg.setStrokeStyle(2, COLORS.neonPink);
-      label.setColor('#ffffff');
-    });
-
-    container.on('pointerdown', onClick);
-
-    return container;
   }
 
   private startQuickMatch(): void {

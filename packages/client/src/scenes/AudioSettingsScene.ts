@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
-import { createNeonTitle, createPanel, drawRetroBackdrop } from '../ui/RetroUI';
+import { createNeonTitle, createPanel, createRetroButton, drawRetroBackdrop } from '../ui/RetroUI';
 
 // 80s color palette (matching other scenes)
 const COLORS = {
@@ -194,49 +194,11 @@ export class AudioSettingsScene extends Phaser.Scene {
     text: string,
     onClick: () => void
   ): Phaser.GameObjects.Container {
-    const container = this.add.container(x, y);
-
-    const bg = this.add.rectangle(0, 0, 320, 50, COLORS.darkPurple);
-    bg.setStrokeStyle(2, COLORS.neonPink);
-
-    const label = this.add.text(0, 0, text, {
-      fontSize: '22px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
+    return createRetroButton(this, x, y, text, onClick, {
+      width: 320,
+      height: 50,
+      fontSize: 19,
     });
-    label.setOrigin(0.5);
-
-    container.add([bg, label]);
-    container.setSize(320, 50);
-    container.setInteractive({ useHandCursor: true });
-
-    container.on('pointerover', () => {
-      bg.setFillStyle(0x4a1a6a);
-      bg.setStrokeStyle(3, COLORS.neonCyan);
-      label.setColor('#00ffff');
-      this.tweens.add({
-        targets: container,
-        scaleX: 1.05,
-        scaleY: 1.05,
-        duration: 100,
-      });
-    });
-
-    container.on('pointerout', () => {
-      bg.setFillStyle(COLORS.darkPurple);
-      bg.setStrokeStyle(2, COLORS.neonPink);
-      label.setColor('#ffffff');
-      this.tweens.add({
-        targets: container,
-        scaleX: 1,
-        scaleY: 1,
-        duration: 100,
-      });
-    });
-
-    container.on('pointerdown', onClick);
-
-    return container;
   }
 
   private loadSettings(): void {

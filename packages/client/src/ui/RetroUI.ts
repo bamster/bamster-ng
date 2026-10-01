@@ -75,24 +75,27 @@ export function createNeonTitle(
 
   const shadow = scene.add.text(GAME_WIDTH / 2 + 4, y + 4, text, {
     fontSize: `${fontSize}px`,
-    fontFamily: 'monospace',
-    color: '#330033',
+    fontFamily: 'Impact, Haettenschweiler, sans-serif',
+    fontStyle: 'italic',
+    color: '#ff1b9c',
   }).setOrigin(0.5);
 
   const glow = scene.add.text(GAME_WIDTH / 2, y, text, {
     fontSize: `${fontSize}px`,
-    fontFamily: 'monospace',
-    color: '#ff00ff',
-    stroke: '#ff00ff',
-    strokeThickness: 8,
+    fontFamily: 'Impact, Haettenschweiler, sans-serif',
+    fontStyle: 'italic',
+    color: '#00ffff',
+    stroke: '#00ffff',
+    strokeThickness: 7,
   }).setOrigin(0.5).setAlpha(0.16).setBlendMode(Phaser.BlendModes.ADD);
 
   const title = scene.add.text(GAME_WIDTH / 2, y, text, {
     fontSize: `${fontSize}px`,
-    fontFamily: 'monospace',
-    color: '#ff66ff',
-    stroke: '#ff00ff',
-    strokeThickness: 2,
+    fontFamily: 'Impact, Haettenschweiler, sans-serif',
+    fontStyle: 'italic',
+    color: '#fff3d6',
+    stroke: '#12051f',
+    strokeThickness: 3,
   }).setOrigin(0.5);
 
   const lineWidth = Math.min(130, Math.max(60, (GAME_WIDTH - title.width) / 2 - 55));
@@ -124,4 +127,104 @@ export function createPanel(
   panel.lineBetween(x + width / 2 - corner, y + height / 2, x + width / 2, y + height / 2);
   panel.lineBetween(x + width / 2, y + height / 2 - corner, x + width / 2, y + height / 2);
   return panel;
+}
+
+interface RetroButtonOptions {
+  width?: number;
+  height?: number;
+  subtitle?: string;
+  fontSize?: number;
+  accent?: number;
+}
+
+export function createRetroButton(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  text: string,
+  onClick: () => void,
+  options: RetroButtonOptions = {}
+): Phaser.GameObjects.Container {
+  const width = options.width ?? 280;
+  const height = options.height ?? (options.subtitle ? 60 : 46);
+  const accent = options.accent ?? RETRO_COLORS.pink;
+  const container = scene.add.container(x, y);
+  const chamfer = 10;
+  const points = [
+    chamfer, 0,
+    width - chamfer, 0,
+    width, chamfer,
+    width, height,
+    chamfer, height,
+    0, height - chamfer,
+    0, 0,
+  ];
+
+  const shadow = scene.add.polygon(6, 6, points, RETRO_COLORS.pink, 0.42);
+  const background = scene.add.polygon(0, 0, points, RETRO_COLORS.panel, 0.96);
+  background.setStrokeStyle(2, accent, 0.95);
+
+  const badgeMatch = text.match(/^\[([^\]]+)\]\s*(.*)$/);
+  const labelText = badgeMatch?.[2] ?? text;
+  const hasBadge = badgeMatch !== null;
+  const label = scene.add.text(hasBadge ? 15 : 0, options.subtitle ? -9 : 0, labelText, {
+    fontSize: `${options.fontSize ?? 18}px`,
+    fontFamily: 'monospace',
+    fontStyle: 'bold',
+    color: '#fff8e8',
+  }).setOrigin(0.5);
+
+  container.add([shadow, background, label]);
+
+  if (hasBadge && badgeMatch) {
+    const badgeX = -width / 2 + 34;
+    const badge = scene.add.rectangle(badgeX, 0, 42, 28, 0x160b2a, 1);
+    badge.setStrokeStyle(1, RETRO_COLORS.yellow, 1);
+    const badgeText = scene.add.text(badgeX, 0, badgeMatch[1], {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      color: '#ffff00',
+    }).setOrigin(0.5);
+    container.add([badge, badgeText]);
+  }
+
+  if (options.subtitle) {
+    const subtitle = scene.add.text(hasBadge ? 15 : 0, 13, options.subtitle, {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#a7a0b8',
+    }).setOrigin(0.5);
+    container.add(subtitle);
+  }
+
+  const accentBar = scene.add.rectangle(-width / 2 + 3, 0, 5, height - 14, RETRO_COLORS.cyan, 0.9);
+  container.add(accentBar);
+  container.setSize(width, height);
+  container.setInteractive({ useHandCursor: true });
+
+  container.on('pointerover', () => {
+    scene.tweens.killTweensOf(container);
+    background.setFillStyle(RETRO_COLORS.cyan, 0.95);
+    background.setStrokeStyle(2, 0xffffff, 1);
+    label.setColor('#080713');
+    accentBar.setFillStyle(RETRO_COLORS.yellow, 1);
+    scene.tweens.add({ targets: container, x: x - 4, scaleX: 1.02, scaleY: 1.02, duration: 90 });
+  });
+
+  container.on('pointerout', () => {
+    scene.tweens.killTweensOf(container);
+    background.setFillStyle(RETRO_COLORS.panel, 0.96);
+    background.setStrokeStyle(2, accent, 0.95);
+    label.setColor('#fff8e8');
+    accentBar.setFillStyle(RETRO_COLORS.cyan, 0.9);
+    scene.tweens.add({ targets: container, x, scaleX: 1, scaleY: 1, duration: 90 });
+  });
+
+  container.on('pointerdown', () => {
+    container.setScale(0.98);
+    onClick();
+  });
+
+  return container;
 }

@@ -1,19 +1,9 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@bamster/shared';
 import { getSound } from '../systems/SoundManager';
-import { drawRetroBackdrop } from '../ui/RetroUI';
+import { createRetroButton, drawRetroBackdrop } from '../ui/RetroUI';
 
 export type GameMode = 'single' | 'local' | 'online';
-
-// 80s color palette
-const COLORS = {
-  background: 0x0a0a1a,
-  neonPink: 0xff00ff,
-  neonCyan: 0x00ffff,
-  neonYellow: 0xffff00,
-  neonOrange: 0xff6600,
-  darkPurple: 0x2a0a4a,
-};
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -23,33 +13,36 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     drawRetroBackdrop(this);
 
-    // Title with chrome/neon effect - split into "BAMster" and "2OOO"
-    const titleX = GAME_WIDTH / 2 - 100;
-    const yearX = GAME_WIDTH / 2 + 180;
+    // Oversized arcade-flyer branding with chromatic print offsets.
+    const titleX = GAME_WIDTH / 2 - 105;
+    const yearX = GAME_WIDTH / 2 + 205;
 
     // Shadow for "BAMster"
-    const titleShadow = this.add.text(titleX + 4, 84, 'BAMster', {
-      fontSize: '72px',
-      fontFamily: 'monospace',
-      color: '#330033',
+    const titleShadow = this.add.text(titleX + 8, 87, 'BAMSTER', {
+      fontSize: '82px',
+      fontFamily: 'Impact, Haettenschweiler, sans-serif',
+      fontStyle: 'italic',
+      color: '#ff149d',
     });
     titleShadow.setOrigin(0.5);
 
     // Main "BAMster" text
-    const title = this.add.text(titleX, 80, 'BAMster', {
-      fontSize: '72px',
-      fontFamily: 'monospace',
-      color: '#ff00ff',
-      stroke: '#ff88ff',
+    const title = this.add.text(titleX, 80, 'BAMSTER', {
+      fontSize: '82px',
+      fontFamily: 'Impact, Haettenschweiler, sans-serif',
+      fontStyle: 'italic',
+      color: '#fff3d6',
+      stroke: '#17051f',
       strokeThickness: 4,
     });
     title.setOrigin(0.5);
 
     // Glowing effect for "BAMster"
-    const titleGlow = this.add.text(titleX, 80, 'BAMster', {
-      fontSize: '72px',
-      fontFamily: 'monospace',
-      color: '#ff00ff',
+    const titleGlow = this.add.text(titleX - 6, 77, 'BAMSTER', {
+      fontSize: '82px',
+      fontFamily: 'Impact, Haettenschweiler, sans-serif',
+      fontStyle: 'italic',
+      color: '#00ffff',
     });
     titleGlow.setOrigin(0.5);
     titleGlow.setAlpha(0.3);
@@ -70,8 +63,9 @@ export class MenuScene extends Phaser.Scene {
     const yearLayers: Phaser.GameObjects.Text[] = [];
     rainbowLayers.forEach((layer) => {
       const yearLayer = this.add.text(yearX, 80 + layer.offsetY, '2OOO', {
-        fontSize: '72px',
-        fontFamily: 'monospace',
+        fontSize: '62px',
+        fontFamily: 'Impact, Haettenschweiler, sans-serif',
+        fontStyle: 'italic',
         color: layer.color,
       });
       yearLayer.setOrigin(0.5);
@@ -82,19 +76,24 @@ export class MenuScene extends Phaser.Scene {
 
     // Main "2OOO" text on top (white/bright core)
     const year = this.add.text(yearX, 80, '2OOO', {
-      fontSize: '72px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
-      stroke: '#ffffff',
-      strokeThickness: 2,
+      fontSize: '62px',
+      fontFamily: 'Impact, Haettenschweiler, sans-serif',
+      fontStyle: 'italic',
+      color: '#ffff33',
+      stroke: '#ff247d',
+      strokeThickness: 3,
     });
     year.setOrigin(0.5);
 
     // Subtitle
-    const subtitle = this.add.text(GAME_WIDTH / 2, 150, "★ It's BAMster time! ★", {
-      fontSize: '20px',
+    const subtitle = this.add.text(GAME_WIDTH / 2, 151, "IT'S BAMSTER TIME", {
+      fontSize: '14px',
       fontFamily: 'monospace',
-      color: '#00ffff',
+      fontStyle: 'bold',
+      color: '#080713',
+      backgroundColor: '#00ffff',
+      padding: { x: 14, y: 5 },
+      letterSpacing: 3,
     });
     subtitle.setOrigin(0.5);
 
@@ -162,7 +161,7 @@ export class MenuScene extends Phaser.Scene {
       this.scene.start('LobbyScene');
     });
 
-    this.createButton(buttonX, 375, '? HOW TO PLAY', () => {
+    this.createButton(buttonX, 375, '[?] HOW TO PLAY', () => {
       this.scene.start('TutorialScene');
     });
 
@@ -217,15 +216,13 @@ export class MenuScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    // Subtitle color cycling
-    this.time.addEvent({
-      delay: 1200,
-      callback: () => {
-        const colors = ['#00ffff', '#ff00ff', '#ffff00', '#ff6600'];
-        const current = colors.indexOf(subtitle.style.color as string);
-        subtitle.setColor(colors[(current + 1) % colors.length]);
-      },
-      loop: true,
+    this.tweens.add({
+      targets: subtitle,
+      alpha: 0.72,
+      duration: 900,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
     });
   }
 
@@ -235,50 +232,11 @@ export class MenuScene extends Phaser.Scene {
     text: string,
     onClick: () => void
   ): Phaser.GameObjects.Container {
-    const container = this.add.container(x, y);
-
-    // Button background with neon border
-    const bg = this.add.rectangle(0, 0, 280, 45, COLORS.darkPurple);
-    bg.setStrokeStyle(2, COLORS.neonPink);
-
-    const label = this.add.text(0, 0, text, {
-      fontSize: '20px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
+    return createRetroButton(this, x, y, text, onClick, {
+      width: 300,
+      height: 48,
+      fontSize: 18,
     });
-    label.setOrigin(0.5);
-
-    container.add([bg, label]);
-    container.setSize(280, 45);
-    container.setInteractive({ useHandCursor: true });
-
-    container.on('pointerover', () => {
-      bg.setFillStyle(0x4a1a6a);
-      bg.setStrokeStyle(3, COLORS.neonCyan);
-      label.setColor('#00ffff');
-      this.tweens.add({
-        targets: container,
-        scaleX: 1.05,
-        scaleY: 1.05,
-        duration: 100,
-      });
-    });
-
-    container.on('pointerout', () => {
-      bg.setFillStyle(COLORS.darkPurple);
-      bg.setStrokeStyle(2, COLORS.neonPink);
-      label.setColor('#ffffff');
-      this.tweens.add({
-        targets: container,
-        scaleX: 1,
-        scaleY: 1,
-        duration: 100,
-      });
-    });
-
-    container.on('pointerdown', onClick);
-
-    return container;
   }
 
   private startGame(mode: GameMode): void {
